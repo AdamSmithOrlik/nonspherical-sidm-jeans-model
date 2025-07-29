@@ -1,0 +1,4 @@
+Descisions:
+- Name: sidmhalo for the folder name and name in pyproject.toml 
+    - easy to remember and easy to install and import 
+- Moved initial_guess to data/ folder and refactored how it is called 
