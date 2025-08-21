@@ -22,11 +22,11 @@ def spherical(r1,*outer_halo_params,Phi_b=None,**kwargs):
         outer_halo = CDM_profile(*outer_halo_params,q0=1,Phi_b=Phi_b,**kwargs)
         
         # Compute spherically averaged potential from enclosed mass profile (computed within outer_halo)
-        Phi_b_sph = jeans.tools.compute_Phi_b_spherical(outer_halo.M_b,1e-6*outer_halo.r200,outer_halo.r200)
+        Phi_b_sph = sidmhalo.tools.compute_Phi_b_spherical(outer_halo.M_b,1e-6*outer_halo.r200,outer_halo.r200)
         
         # Spherical Jeans model (with spherically averaged potential)
         # Matched onto spherical outer halo
-        inner_halo, success = jeans.spherical.relaxation(r1,outer_halo,Phi_b=Phi_b_sph,**kwargs)
+        inner_halo, success = sidmhalo.spherical.relaxation(r1,outer_halo,Phi_b=Phi_b_sph,**kwargs)
         
         # Matching was successful
         if success:
@@ -52,11 +52,11 @@ def squashed(r1,*outer_halo_params,q0=1,Phi_b=None,q_mode='smooth',**kwargs):
         outer_halo = CDM_profile(*outer_halo_params,q0=1,Phi_b=Phi_b,**kwargs)
         
         # Compute spherically averaged potential from enclosed mass profile (computed within outer_halo)
-        Phi_b_sph = jeans.tools.compute_Phi_b_spherical(outer_halo.M_b,1e-6*outer_halo.r200,outer_halo.r200)
+        Phi_b_sph = sidmhalo.tools.compute_Phi_b_spherical(outer_halo.M_b,1e-6*outer_halo.r200,outer_halo.r200)
         
         # Spherical Jeans model (with spherically averaged potential)
         # Matched onto spherical outer halo
-        inner_halo, success = jeans.spherical.relaxation(r1,outer_halo,Phi_b=Phi_b_sph,**kwargs)
+        inner_halo, success = sidmhalo.spherical.relaxation(r1,outer_halo,Phi_b=Phi_b_sph,**kwargs)
         
         # Matching was successful
         if success:
@@ -71,7 +71,7 @@ def squashed(r1,*outer_halo_params,q0=1,Phi_b=None,q_mode='smooth',**kwargs):
                 
                 # Calculate q(r_sph) from spherical Jeans model profile 
                 sph_halo = profile(inner=inner_halo,outer=outer_halo)
-                q_eff = jeans.tools.compute_q_eff(sph_halo,q0,**kwargs)
+                q_eff = sidmhalo.tools.compute_q_eff(sph_halo,q0,**kwargs)
                                 
                 halo = profile(inner=inner_halo,outer=outer_halo,q=q_eff)
                 return halo
@@ -97,7 +97,7 @@ def isothermal(r1,*outer_halo_params,q0=1,Phi_b=None,**kwargs):
         outer_halo = CDM_profile(*outer_halo_params,q0=q0,Phi_b=Phi_b,**kwargs)
     
         # Nonspherical Jeans model matched onto nonspherical outer halo
-        inner_halo, success = jeans.nonspherical.relaxation(r1,outer_halo,Phi_b=outer_halo.Phi_b,**kwargs)
+        inner_halo, success = sidmhalo.nonspherical.relaxation(r1,outer_halo,Phi_b=outer_halo.Phi_b,**kwargs)
         
         # Matching was successful
         if success:
