@@ -1,5 +1,6 @@
 import numpy as np
 from inspect import signature
+import inspect
 import os
 
 from scipy.integrate import solve_ivp, dblquad
@@ -452,28 +453,74 @@ class profile:
 
         # End M_encl
 
-    def save(self, filename, **extra):
+    # def save(self, filename, **extra):
 
-        # Outputs to save from outer halo
-        outputs = self.outer.tosave()
+    #     # Outputs to save from outer halo
+    #     outputs = self.outer.tosave()
 
-        # Outputs to save from inner halo
-        if self.inner:
-            outputs.update(self.inner.tosave())
+    #     # Outputs to save from inner halo
+    #     if self.inner:
+    #         outputs.update(self.inner.tosave())
 
-        # Include any extra quantities to save
-        if extra is not None:
-            outputs["attrs"] = dict(extra)
+    #     # Include any extra quantities to save
+    #     if extra is not None:
+    #         outputs["attrs"] = dict(extra)
 
-        # Make directories if needed
-        try:
-            if not os.path.exists(os.path.dirname(filename)):
-                os.makedirs(os.path.dirname(filename))
-        except:
-            pass
+    #     # Make directories if needed
+    #     try:
+    #         if not os.path.exists(os.path.dirname(filename)):
+    #             os.makedirs(os.path.dirname(filename))
+    #     except:
+    #         pass
 
-        # Save outputs
-        np.savez(filename, **outputs)
+    #     # Save outputs
+    #     np.savez(filename, **outputs)
+
+    def save(self, filename):
+        """
+        Save the profile (and any nested profiles) to a file, including all parameters and functions.
+        Handles q and Phi_b as functions, constants, or None.
+        """
+
+        def serialize_func(f):
+            if f is None:
+                return {"type": "none"}
+            if callable(f):
+                if hasattr(f, "__name__") and f.__name__ != "<lambda>":
+                    return {"type": "name", "name": f.__name__}
+                else:
+                    # Save source code for lambdas or user-defined functions
+                    return {"type": "source", "source": inspect.getsource(f)}
+            # If not callable, just store the value (e.g., for q0=1)
+            return {"type": "value", "value": f}
+
+        def serialize_profile(obj):
+            if obj is None:
+                return None
+            d = {"class_type": obj.__class__.__name__}
+            if isinstance(obj, profile):
+                d["inner"] = serialize_profile(obj.inner)
+                d["outer"] = serialize_profile(obj.outer)
+                d["q"] = serialize_func(obj.q)
+            elif isinstance(obj, isothermal_profile):
+                d["y"] = obj.y
+                d["params"] = obj.params
+                d["r_list"] = obj.r_list
+                d["L_list"] = obj.L_list
+                d["M_list"] = obj.M_list
+                d["Phi_b"] = serialize_func(obj.Phi_b)
+            elif isinstance(obj, CDM_profile):
+                d["M200"] = obj.M200
+                d["c"] = obj.c
+                d["q0"] = obj.q0
+                d["AC_prescription"] = obj.AC_prescription
+                d["Gnedin_params"] = obj.Gnedin_params
+                d["Phi_b"] = serialize_func(obj.Phi_b)
+            # Add more as needed for other profile types
+            return d
+
+        data = serialize_profile(self)
+        np.savez(filename, profile_data=data)
 
     # Rotation curves
 
@@ -1789,61 +1836,123 @@ class CDM_profile:
 
 
 ## Load profile
-def load_profile(file_name, Phi_b=no_baryons, M_b=None, verbose=False):
+# def load_profile(file_name, Phi_b=no_baryons, M_b=None, verbose=False):
 
-    # Try to load a profile assuming it was a successful one
-    try:
-        data = np.load(file_name, allow_pickle=True)
-        y = data["y"]
-        params = data["params"]
-        r_list = data["r_list"]
-        L_list = data["L_list"]
-        M_list = data["M_list"]
+#     # Try to load a profile assuming it was a successful one
+#     try:
+#         data = np.load(file_name, allow_pickle=True)
+#         y = data["y"]
+#         params = data["params"]
+#         r_list = data["r_list"]
+#         L_list = data["L_list"]
+#         M_list = data["M_list"]
 
-        if verbose:
-            print("Computing outer halo")
-        try:
-            M200 = float(data["M200"])
-            c = float(data["c"])
-            q0 = float(data["q0"])
-            AC_prescription = data["AC_prescription"]
+#         if verbose:
+#             print("Computing outer halo")
+#         try:
+#             M200 = float(data["M200"])
+#             c = float(data["c"])
+#             q0 = float(data["q0"])
+#             AC_prescription = data["AC_prescription"]
 
-            if AC_prescription == "Gnedin":
-                Gnedin_params = data["Gnedin_params"]
+#             if AC_prescription == "Gnedin":
+#                 Gnedin_params = data["Gnedin_params"]
+#             else:
+#                 Gnedin_params = None
+
+#             outer_halo = CDM_profile(
+#                 M200,
+#                 c,
+#                 q0=q0,
+#                 Phi_b=Phi_b,
+#                 AC_prescription=AC_prescription,
+#                 Gnedin_params=Gnedin_params,
+#                 M_b=M_b,
+#             )
+
+#             if verbose:
+#                 print("Done computing outer halo")
+
+#         except:
+#             print("No outer halo profile found")
+#             outer_halo = None
+
+#         profile = isothermal_profile(
+#             y=y, params=params, r_list=r_list, L_list=L_list, M_list=M_list, Phi_b=Phi_b
+#         )
+#         success_test = True
+
+#     # Profile file may contain an error message if it failed to relax
+#     except:
+#         fail_msg = str(np.loadtxt(file_name, delimiter="None", dtype=str))
+#         print(fail_msg)
+#         if fail_msg == "relaxation failed":
+#             profile = None
+#             success_test = False
+
+#         else:
+#             raise Exception("%s cannot be loaded." % file_name)
+
+#     return profile, success_test
+
+
+def load_profile(filename):
+    """
+    Load a profile object (and any nested profiles) from a file, restoring all parameters and functions.
+    Handles q and Phi_b as functions, constants, or None.
+    """
+    import sidmhalo.definitions as definitions
+
+    def deserialize_func(fdict, fallback=None):
+        if fdict is None or fdict.get("type") == "none":
+            return fallback
+        if fdict["type"] == "name":
+            # Try to get from known functions
+            if hasattr(definitions, fdict["name"]):
+                return getattr(definitions, fdict["name"])
             else:
-                Gnedin_params = None
+                return fallback
+        elif fdict["type"] == "source":
+            # Recreate function from source
+            local_vars = {}
+            exec(fdict["source"], globals(), local_vars)
+            return next(v for v in local_vars.values() if callable(v))
+        elif fdict["type"] == "value":
+            # Just return the value (e.g., float/int)
+            return fdict["value"]
+        return fallback
 
-            outer_halo = CDM_profile(
-                M200,
-                c,
-                q0=q0,
+    def deserialize_profile(d):
+        if d is None:
+            return None
+        if d["class_type"] == "profile":
+            inner = deserialize_profile(d["inner"])
+            outer = deserialize_profile(d["outer"])
+            q_val = deserialize_func(d["q"], fallback=None)
+            return profile(inner=inner, outer=outer, q=q_val)
+        elif d["class_type"] == "isothermal_profile":
+            Phi_b = deserialize_func(d["Phi_b"], fallback=definitions.no_baryons)
+            return isothermal_profile(
+                d["y"],
+                d["params"],
+                d["r_list"],
                 Phi_b=Phi_b,
-                AC_prescription=AC_prescription,
-                Gnedin_params=Gnedin_params,
-                M_b=M_b,
+                L_list=d["L_list"],
+                M_list=d["M_list"],
             )
+        elif d["class_type"] == "CDM_profile":
+            Phi_b = deserialize_func(d["Phi_b"], fallback=definitions.no_baryons)
+            return CDM_profile(
+                d["M200"],
+                d["c"],
+                q0=d["q0"],
+                Phi_b=Phi_b,
+                AC_prescription=d["AC_prescription"],
+                Gnedin_params=d["Gnedin_params"],
+            )
+        # Add more as needed for other profile types
+        return None
 
-            if verbose:
-                print("Done computing outer halo")
-
-        except:
-            print("No outer halo profile found")
-            outer_halo = None
-
-        profile = isothermal_profile(
-            y=y, params=params, r_list=r_list, L_list=L_list, M_list=M_list, Phi_b=Phi_b
-        )
-        success_test = True
-
-    # Profile file may contain an error message if it failed to relax
-    except:
-        fail_msg = str(np.loadtxt(file_name, delimiter="None", dtype=str))
-        print(fail_msg)
-        if fail_msg == "relaxation failed":
-            profile = None
-            success_test = False
-
-        else:
-            raise Exception("%s cannot be loaded." % file_name)
-
-    return profile, success_test
+    npzfile = np.load(filename, allow_pickle=True)
+    data = npzfile["profile_data"].item()
+    return deserialize_profile(data)
