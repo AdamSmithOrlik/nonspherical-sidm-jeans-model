@@ -453,75 +453,6 @@ class profile:
 
         # End M_encl
 
-    # def save(self, filename, **extra):
-
-    #     # Outputs to save from outer halo
-    #     outputs = self.outer.tosave()
-
-    #     # Outputs to save from inner halo
-    #     if self.inner:
-    #         outputs.update(self.inner.tosave())
-
-    #     # Include any extra quantities to save
-    #     if extra is not None:
-    #         outputs["attrs"] = dict(extra)
-
-    #     # Make directories if needed
-    #     try:
-    #         if not os.path.exists(os.path.dirname(filename)):
-    #             os.makedirs(os.path.dirname(filename))
-    #     except:
-    #         pass
-
-    #     # Save outputs
-    #     np.savez(filename, **outputs)
-
-    def save(self, filename):
-        """
-        Save the profile (and any nested profiles) to a file, including all parameters and functions.
-        Handles q and Phi_b as functions, constants, or None.
-        """
-
-        def serialize_func(f):
-            if f is None:
-                return {"type": "none"}
-            if callable(f):
-                if hasattr(f, "__name__") and f.__name__ != "<lambda>":
-                    return {"type": "name", "name": f.__name__}
-                else:
-                    # Save source code for lambdas or user-defined functions
-                    return {"type": "source", "source": inspect.getsource(f)}
-            # If not callable, just store the value (e.g., for q0=1)
-            return {"type": "value", "value": f}
-
-        def serialize_profile(obj):
-            if obj is None:
-                return None
-            d = {"class_type": obj.__class__.__name__}
-            if isinstance(obj, profile):
-                d["inner"] = serialize_profile(obj.inner)
-                d["outer"] = serialize_profile(obj.outer)
-                d["q"] = serialize_func(obj.q)
-            elif isinstance(obj, isothermal_profile):
-                d["y"] = obj.y
-                d["params"] = obj.params
-                d["r_list"] = obj.r_list
-                d["L_list"] = obj.L_list
-                d["M_list"] = obj.M_list
-                d["Phi_b"] = serialize_func(obj.Phi_b)
-            elif isinstance(obj, CDM_profile):
-                d["M200"] = obj.M200
-                d["c"] = obj.c
-                d["q0"] = obj.q0
-                d["AC_prescription"] = obj.AC_prescription
-                d["Gnedin_params"] = obj.Gnedin_params
-                d["Phi_b"] = serialize_func(obj.Phi_b)
-            # Add more as needed for other profile types
-            return d
-
-        data = serialize_profile(self)
-        np.savez(filename, profile_data=data)
-
     # Rotation curves
 
     def Vsq_baryon(self, r):
@@ -896,6 +827,60 @@ class profile:
         else:
             raise Exception("r must be 0D or 1D.")
 
+    def save(self, filename):
+        import numpy as np
+        import inspect, textwrap
+
+        def serialize_func(f):
+            if f is None:
+                return {"type": "none"}
+            if callable(f):
+                if hasattr(f, "__name__") and f.__name__ == "<lambda>":
+                    raise ValueError(
+                        "Cannot serialize lambda functions. Use a named function."
+                    )
+                if hasattr(f, "__module__") and (
+                    f.__module__ == "__main__" or f.__module__ is None
+                ):
+                    src = inspect.getsource(f)
+                    src = textwrap.dedent(src)
+                    return {"type": "source", "source": src}
+                if hasattr(f, "__name__"):
+                    return {"type": "name", "name": f.__name__}
+            return {"type": "value", "value": f}
+
+        def serialize_obj(obj):
+            if obj is None:
+                return None
+            d = {"class_type": obj.__class__.__name__}
+            # Recursively serialize nested profiles and all function attributes
+            if isinstance(obj, profile):
+                d["inner"] = serialize_obj(getattr(obj, "inner", None))
+                d["outer"] = serialize_obj(getattr(obj, "outer", None))
+                # Always serialize the actual q attribute (function or value)
+                d["q"] = serialize_func(getattr(obj, "q", None))
+            elif isinstance(obj, isothermal_profile):
+                d["y"] = getattr(obj, "y", None)
+                d["params"] = getattr(obj, "params", None)
+                d["r_list"] = getattr(obj, "r_list", None)
+                d["L_list"] = getattr(obj, "L_list", None)
+                d["M_list"] = getattr(obj, "M_list", None)
+                # Always serialize the actual Phi_b attribute (function or value)
+                d["Phi_b"] = serialize_func(getattr(obj, "Phi_b", None))
+            elif isinstance(obj, CDM_profile):
+                d["M200"] = getattr(obj, "M200", None)
+                d["c"] = getattr(obj, "c", None)
+                d["q0"] = getattr(obj, "q0", None)
+                d["AC_prescription"] = getattr(obj, "AC_prescription", None)
+                d["Gnedin_params"] = getattr(obj, "Gnedin_params", None)
+                # Always serialize the actual Phi_b attribute (function or value)
+                d["Phi_b"] = serialize_func(getattr(obj, "Phi_b", None))
+            # Add more as needed for other profile types
+            return d
+
+        data = serialize_obj(self)
+        np.savez(filename, profile_data=data)
+
 
 ############################
 # isothermal jeans profile #
@@ -930,8 +915,12 @@ class isothermal_profile:
 
         if Phi_b:
             self.Phi_b = Phi_b
+            self._Phi_b_user = (
+                Phi_b  # Store original user-supplied function for serialization
+            )
         else:
             self.Phi_b = no_baryons
+            self._Phi_b_user = None
 
         self.num_Phi_b_variables = len(signature(self.Phi_b).parameters)
         if self.num_Phi_b_variables > 2:
@@ -1503,15 +1492,15 @@ class isothermal_profile:
             M_list=self.M_list,
         )
 
-    # Makes dictionary of outputs that can be saved
-    def tosave(self, **extra):
-        return {
-            "y": self.y,
-            "params": self.params,
-            "r_list": self.r_list,
-            "L_list": self.L_list,
-            "M_list": self.M_list,
-        }
+    # # Makes dictionary of outputs that can be saved
+    # def tosave(self, **extra):
+    #     return {
+    #         "y": self.y,
+    #         "params": self.params,
+    #         "r_list": self.r_list,
+    #         "L_list": self.L_list,
+    #         "M_list": self.M_list,
+    #     }
 
 
 ###############
@@ -1564,8 +1553,12 @@ class CDM_profile:
         # Baryon potential
         if Phi_b:
             self.Phi_b = Phi_b
+            self._Phi_b_user = (
+                Phi_b  # Store original user-supplied function for serialization
+            )
         else:
             self.Phi_b = no_baryons
+            self._Phi_b_user = None
 
         # Calculate baryon enclosed mass profile
         # If M_b set, use input function M_b for baryon profile
@@ -1818,21 +1811,21 @@ class CDM_profile:
 
         return np.array(moments)
 
-    def tosave(self):
+    # def tosave(self):
 
-        outputs = {
-            "M200": self.M200,
-            "c": self.c,
-            "q0": self.q0,
-            "AC_prescription": self.AC_prescription,
-        }
+    #     outputs = {
+    #         "M200": self.M200,
+    #         "c": self.c,
+    #         "q0": self.q0,
+    #         "AC_prescription": self.AC_prescription,
+    #     }
 
-        if self.AC_prescription == "Gnedin":
-            outputs.update(Gnedin_params=self.Gnedin_params)
-        else:
-            pass
+    #     if self.AC_prescription == "Gnedin":
+    #         outputs.update(Gnedin_params=self.Gnedin_params)
+    #     else:
+    #         pass
 
-        return outputs
+    #     return outputs
 
 
 ## Load profile
@@ -1906,19 +1899,17 @@ def load_profile(filename):
     def deserialize_func(fdict, fallback=None):
         if fdict is None or fdict.get("type") == "none":
             return fallback
+        if fdict["type"] == "source":
+            local_vars = {}
+            exec(fdict["source"], globals(), local_vars)
+            func = next(v for v in local_vars.values() if callable(v))
+            return func
         if fdict["type"] == "name":
-            # Try to get from known functions
             if hasattr(definitions, fdict["name"]):
                 return getattr(definitions, fdict["name"])
             else:
                 return fallback
-        elif fdict["type"] == "source":
-            # Recreate function from source
-            local_vars = {}
-            exec(fdict["source"], globals(), local_vars)
-            return next(v for v in local_vars.values() if callable(v))
-        elif fdict["type"] == "value":
-            # Just return the value (e.g., float/int)
+        if fdict["type"] == "value":
             return fdict["value"]
         return fallback
 
@@ -1952,6 +1943,8 @@ def load_profile(filename):
             )
         # Add more as needed for other profile types
         return None
+
+    import numpy as np
 
     npzfile = np.load(filename, allow_pickle=True)
     data = npzfile["profile_data"].item()

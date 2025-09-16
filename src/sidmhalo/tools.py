@@ -11,6 +11,35 @@ import time as t
 
 # Compute baryon enclosed mass profile from baryon potential
 def compute_Mb(Phi_b, rmin, rmax, num=100):
+    r"""
+    Compute the baryon enclosed mass profile $M_b(r)$ from a baryon potential function $\Phi_b$.
+
+    Parameters
+    ----------
+    Phi_b : callable
+        Baryon potential function. Should be a function of either $r$ or $(r, \theta)$.
+        If a function of $(r, \theta)$, the code will spherically average over $\theta$.
+    rmin : float
+        Minimum radius for calculation (in kpc).
+    rmax : float
+        Maximum radius for calculation (in kpc).
+    num : int, optional
+        Number of points in the radial grid (default: 100).
+
+    Returns
+    -------
+    M_b : callable
+        Function returning the enclosed baryon mass $M_b(r)$ at radius $r$.
+
+    Notes
+    -----
+    This function computes $M_b(r)$ using the relation:
+
+        M_b(r) = r^2 / G_N * d\Phi_b/dr
+
+    where $\Phi_b$ is spherically averaged if necessary. The derivative is computed
+    using a spline interpolation of $\Phi_b$ in log-log space for stability.
+    """
 
     # Number of arguments in Phi_b
     num_variables = len(signature(Phi_b).parameters)
@@ -83,6 +112,31 @@ def compute_Mb(Phi_b, rmin, rmax, num=100):
 
 
 def compute_Phi_b_spherical(Mb, rmin, rmax):
+    r"""
+    Compute the spherically averaged baryon potential $\Phi_b(r)$ from an enclosed mass profile $M_b(r)$.
+
+    Parameters
+    ----------
+    Mb : callable
+        Function returning enclosed baryon mass $M_b(r)$ at radius $r$.
+    rmin : float
+        Minimum radius for calculation (in kpc).
+    rmax : float
+        Maximum radius for calculation (in kpc).
+
+    Returns
+    -------
+    Phi_b_out : callable
+        Spherically averaged baryon potential $\Phi_b(r)$ as a function of $r$.
+
+    Notes
+    -----
+    This function solves the Poisson equation for the potential given the enclosed mass profile:
+
+        d\Phi/dr = G_N M_b(r) / r^2
+
+    with a boundary condition at $r_{min}$ assuming a constant density core, and for $r > r_{max}$ assumes a point mass potential.
+    """
 
     Mmin = Mb(rmin)
     Mmax = Mb(rmax)
@@ -127,6 +181,33 @@ def compute_Phi_b_spherical(Mb, rmin, rmax):
 
 
 def compute_q_baryon(sph_halo, grid=None, R0=0, z0=0, **extraneous):
+    r"""
+    Compute the nonsphericity profile $q(r)$ of the baryon potential for a given halo.
+
+    Parameters
+    ----------
+    sph_halo : profile
+        Spherical halo profile object (must have .outer.Phi_b).
+    grid : array-like, optional
+        Radial grid for calculation (default: auto-generated from halo properties).
+    R0 : float, optional
+        Reference $R$ coordinate for the axis ratio calculation (default: 0).
+    z0 : float, optional
+        Reference $z$ coordinate for the axis ratio calculation (default: 0).
+    **extraneous : dict
+        Additional keyword arguments (ignored).
+
+    Returns
+    -------
+    q_baryon : callable
+        Function returning baryon nonsphericity $q(r)$ as a function of $r$.
+
+    Notes
+    -----
+    For a spherically symmetric potential, returns $q(r) = 0$ everywhere.
+    For axisymmetric potentials, computes $q(r)$ by comparing the potential along the
+    radial and axial directions, using spline interpolation and root finding.
+    """
 
     # Baryon potential
     Phi_b = sph_halo.outer.Phi_b
@@ -206,6 +287,28 @@ def compute_q_baryon(sph_halo, grid=None, R0=0, z0=0, **extraneous):
 
 
 def compute_q_iso(sph_halo, q_model=None, **kwargs):
+    r"""
+    Compute the isothermal nonsphericity profile $q_{\rm iso}(r)$ for a given spherical halo.
+
+    Parameters
+    ----------
+    sph_halo : profile
+        Spherical halo profile object.
+    q_model : callable, optional
+        Function $q_{\rm model}(q_b, f)$ to combine baryon and DM nonsphericity (default: built-in model).
+    **kwargs : dict
+        Additional arguments passed to `compute_q_baryon`.
+
+    Returns
+    -------
+    q_iso : callable
+        Isothermal nonsphericity profile $q_{\rm iso}(r)$ as a function of $r$.
+
+    Notes
+    -----
+    The default $q_{\rm model}$ interpolates between the baryon potential nonsphericity $q_b$ and the DM fraction $f_{\rm dm}$.
+    The result is a smooth function suitable for use in axis ratio calculations.
+    """
 
     # sph_halo is profile object from spherical Jeans model
     r1 = sph_halo.r1
@@ -238,6 +341,30 @@ def compute_q_iso(sph_halo, q_model=None, **kwargs):
 
 
 def compute_q_eff(sph_halo, q0, Nm=1, **kwargs):
+    r"""
+    Compute the effective nonsphericity profile $q_{\rm eff}(r)$ for a given spherical halo, interpolating between $q_0$ and $q_{\rm iso}$.
+
+    Parameters
+    ----------
+    sph_halo : profile
+        Spherical halo profile object.
+    q0 : float or callable
+        Collisionless (outer) axis ratio, or function of $r$.
+    Nm : float, optional
+        Number of averaged scatters per particle per lifetime of the halo at the matching radius (default: 1).
+    **kwargs : dict
+        Additional arguments passed to `compute_q_iso`.
+
+    Returns
+    -------
+    q_eff : callable
+        Effective nonsphericity profile $q_{\rm eff}(r)$ as a function of $r$.
+
+    Notes
+    -----
+    $q_{\rm eff}(r)$ interpolates between the isothermal profile $q_{\rm iso}(r)$ and the collisionless value $q_0$ using a toy model for the number of DM scatters.
+    For $r_1 \leq 0$, returns a constant or vectorized $q_0$.
+    """
 
     # sph_halo is profile object from spherical Jeans model
     r1 = sph_halo.r1
@@ -277,6 +404,33 @@ def compute_q_eff(sph_halo, q0, Nm=1, **kwargs):
 
 
 def compute_r_sph_grid(outer_halo, q_func, numr=30, numth=20):
+    r"""
+    Compute a grid and interpolator for the spheroidal radius as a function of $(r, \theta)$ for a given axis ratio profile $q(r)$.
+
+    Parameters
+    ----------
+    outer_halo : profile
+        Outer halo profile object (must have .r200).
+    q_func : callable
+        Function returning axis ratio $q(r)$.
+    numr : int, optional
+        Number of radial grid points (default: 30).
+    numth : int, optional
+        Number of theta grid points (default: 20).
+
+    Returns
+    -------
+    r_sph_interp : callable
+        Interpolator for spheroidal radius $r_{\rm sph}(r, \theta)$.
+
+    Notes
+    -----
+    The function solves for the spheroidal radius $r_{\rm sph}$ at each $(r, \theta)$ by iteratively solving the equation:
+
+        r_{\rm sph}^2 = R^2 q(r_{\rm sph})^{2/3} + z^2 q(r_{\rm sph})^{-4/3}
+
+    where $R = r \sin\theta$ and $z = r \cos\theta$. The returned interpolator is symmetrized about $\theta = \pi/2$.
+    """
 
     r200 = outer_halo.r200
     r_list = np.geomspace(1e-6 * r200, r200, num=numr)
