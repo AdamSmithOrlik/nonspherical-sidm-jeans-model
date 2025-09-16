@@ -3,3 +3,7 @@ Descisions:
     - easy to remember and easy to install and import 
 - Moved initial_guess to data/ folder and refactored how it is called 
 - Replaces the deprecated scipy.misc.derivitive 
+
+16/09/25
+- Remove findDiff from the package and hardcode the midpoint derivative 
+
