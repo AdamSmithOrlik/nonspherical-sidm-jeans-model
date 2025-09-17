@@ -24,3 +24,9 @@ TO DO LIST:
 - adding comments to code and headers 
 - need to add references to each file 
 - clean up rotcurve.py file
+
+17/09/25
+- fixed the save/load functions with dill 
+- added Andrews data to examples 
+- working on simulation.py file and fit class to load the data in examples 
+    - need to get finish writing the simulations file and test it

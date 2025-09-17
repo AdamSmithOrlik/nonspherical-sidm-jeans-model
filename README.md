@@ -20,10 +20,12 @@ Clone the repository and install in editable (development) mode:
 ```bash
 git clone https://github.com/AdamSmithOrlik/nonspherical-sidm-jeans-model.git
 cd nonspherical-sidm-jeans-model
-pip install -e .
+pip install .
 
 ```
 
 ## Examples
 
 See the examples forlder for jupyter notebooks that show how to use the sidmhalo package.
+
+To recreate examples involving SIDM1b and CDMb EAGLE-50 data you can download the data from https://zenodo.org/records/16331984 and save in the <examples/data/> folder.
