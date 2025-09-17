@@ -5,7 +5,7 @@ Descisions:
 - Replaces the deprecated scipy.misc.derivitive 
 
 TO DO LIST:
-1. Add save and load functionlity -> IN PROGRESS 
+1. Add save and load functionlity -> DONE
 2. Fix the rotation curve code -> DONE 
 3. Add commented code and documentation -> 
 4. Add simulation integration with Andrews data -> 
