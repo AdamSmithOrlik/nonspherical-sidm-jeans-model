@@ -158,6 +158,14 @@ def Vsq_LM(rho_LM, r, L, M=0):
     order = np.argsort(r)
     r_arr = np.array(r, dtype="float")[order]
     r_eval = r_arr[r_arr > 0]
+    if r_eval.size == 0:
+        print(
+            f"[Vsq_LM] Warning: r_eval is empty for L={L}. Skipping integration and returning zeros."
+        )
+        # Return zeros in the same shape as r_arr, reordered to match input
+        Vsq_out = np.zeros_like(r_arr)
+        unorder = np.argsort(order)
+        return Vsq_out[unorder]
 
     # Prefactor
     prefactor = 4 * np.pi * GN / (2 * L + 1)
@@ -166,12 +174,11 @@ def Vsq_LM(rho_LM, r, L, M=0):
     Vsq_out = np.zeros_like(r_arr)
 
     if max(r) > 0:
-
         # First term:
         # G(r) = int_0^r dx x^(L+2) rho_LM(x)
 
-        # End points for integration
-        rmin, rmax = 0, max(r_eval)
+        # End points for integration: match r_eval exactly
+        rmin, rmax = r_eval[0], r_eval[-1]
 
         # integrand = lambda r,y: r**(L+2) * rho_LM(r,L)
         def integrand(r, y):
@@ -180,13 +187,41 @@ def Vsq_LM(rho_LM, r, L, M=0):
             else:
                 return 0
 
+        # # Diagnostics before solve_ivp
+        # print("[Vsq_LM] r_eval:", r_eval)
+        # print("[Vsq_LM] rmin:", rmin, "rmax:", rmax)
+        # print("[Vsq_LM] L:", L)
+        try:
+            test_rho = [rho_LM(val) for val in r_eval[:3]]
+            # print("[Vsq_LM] rho_LM(r_eval[:3]):", test_rho)
+        except Exception as e:
+            print("[Vsq_LM] Error evaluating rho_LM on r_eval[:3]:", e)
+
         # Calculate integrals
         solution = solve_ivp(
             integrand, [rmin, rmax], [0], rtol=1e-6, atol=1e-6, t_eval=r_eval
         )
-        G_vals = solution.y[0]
+        # print("[Vsq_LM] solution.t:", solution.t)
+        # print("[Vsq_LM] solution.y shape:", solution.y.shape)
+        if solution.y.shape[0] == 0 or solution.y.shape[1] == 0:
+            raise RuntimeError(
+                f"[Vsq_LM] solve_ivp returned empty solution.y: shape {solution.y.shape}. Check input arrays and integrand."
+            )
+        # Align ODE output with r_eval, filling missing points with np.nan
+        G_vals = np.full_like(r_eval, np.nan, dtype=float)
+        # solution.t may be missing the first point if the solver can't reach it
+        for i, rval in enumerate(r_eval):
+            idx = np.where(np.isclose(solution.t, rval, atol=1e-10))[0]
+            if idx.size > 0:
+                G_vals[i] = solution.y[0][idx[0]]
+            else:
+                print(
+                    f"[Vsq_LM] WARNING: ODE solver did not return value for r={rval}. Filling with np.nan."
+                )
+        # print("[Vsq_LM] G_vals (aligned):", G_vals)
 
-        Vsq_out[r_arr > 0] += prefactor * (L + 1) / r_eval ** (L + 1) * G_vals
+        mask = r_arr > 0
+        Vsq_out[mask] += prefactor * (L + 1) / r_eval ** (L + 1) * G_vals
 
         # Second term: only needed if L > 0
         # H(r) = int_r^inf x^(1-L) rho_LM(x) = - F(r) + H0

@@ -20,4 +20,4 @@ TO DO LIST:
 
 - adding comments to code and headers 
 - need to add references to each file 
-- 
+- clean up rotcurve.py file

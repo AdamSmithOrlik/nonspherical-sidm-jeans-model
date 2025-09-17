@@ -473,7 +473,6 @@ class profile:
         # End M_encl
 
     # Rotation curves
-
     def Vsq_baryon(self, r):
 
         # Phi_b from outer profile
