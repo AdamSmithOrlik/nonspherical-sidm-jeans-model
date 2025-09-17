@@ -1,3 +1,18 @@
+"""
+potential.py
+------------
+Purpose:   Gravitational potential calculation utilities for the nonspherical SIDM Jeans modeling package.
+Authors:   Sean Tulin, Adam Smith-Orlik
+Contact:   stulin@yorku.ca, asorlik@yorku.ca
+Status:    Stable Version
+Last Edit: 2025-09-16
+
+This file contains functions for computing the gravitational potential from density multipoles and related utilities.
+"""
+
+######################################################################
+############################## IMPORTS ###############################
+######################################################################
 import numpy as np
 from inspect import signature
 from scipy.integrate import solve_ivp
@@ -7,7 +22,34 @@ from scipy.integrate import solve_ivp
 from sidmhalo.definitions import GN, Z, integrate
 
 
+######################################################################
+######################## FUNCTION DEFINITIONS ########################
+######################################################################
 def Phi_LM(rho_LM, r, L, M=0):
+    r"""
+    Compute the gravitational potential $\Phi$ from the $(L, M)$ multipole of the density.
+
+    Parameters
+    ----------
+    rho_LM : callable
+        Function returning the $(L, M)$ multipole of the density at radius $r$.
+    r : float or array-like
+        Radius or array of radii at which to compute the potential.
+    L : int
+        Spherical harmonic degree $L$.
+    M : int, optional
+        Spherical harmonic order $M$ (default: 0). Only $M=0$ is implemented.
+
+    Returns
+    -------
+    float or ndarray
+        The $(L, M)$ multipole contribution to the potential at each radius $r$.
+
+    Notes
+    -----
+    Computes the solution to Poisson's equation for the $L$-th multipole of the density.
+    Only $M=0$ (axisymmetric) is currently supported.
+    """
 
     if M != 0:
         raise Exception("M != 0 not implemented.")

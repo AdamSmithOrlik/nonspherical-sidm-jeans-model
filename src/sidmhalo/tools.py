@@ -1,3 +1,18 @@
+"""
+tools.py
+--------
+Purpose:   Utility functions for SIDM and CDM halo modeling, including baryon mass, potential, and axis ratio calculations.
+Authors:   Sean Tulin, Adam Smith Orlik
+Contact:   stulin@yorku.ca, asorlik@yorku.ca
+Status:    Stable Version
+Last Edit: 2025-09-16
+
+This file contains core computational tools for the nonspherical SIDM Jeans modeling package, including baryon mass, potential, and shape calculations.
+"""
+
+######################################################################
+############################## IMPORTS ###############################
+######################################################################
 import numpy as np
 from inspect import signature
 from scipy.interpolate import InterpolatedUnivariateSpline, RectBivariateSpline
@@ -9,6 +24,9 @@ from sidmhalo.definitions import no_baryons, integrate, GN
 import time as t
 
 
+######################################################################
+######################## FUNCTION DEFINITIONS ########################
+######################################################################
 # Compute baryon enclosed mass profile from baryon potential
 def compute_Mb(Phi_b, rmin, rmax, num=100):
     r"""

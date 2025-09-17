@@ -1,3 +1,18 @@
+"""
+rotcurve.py
+-----------
+Purpose:   Rotation curve calculation utilities for the nonspherical SIDM Jeans modeling package.
+Authors:   Sean Tulin, Adam Smith Orlik
+Contact:   stulin@yorku.ca, asorlik@yorku.ca
+Status:    Stable Version
+Last Edit: 2025-09-16
+
+This file contains functions for computing baryonic and halo contributions to the circular velocity, including multipole and numerical derivative utilities.
+"""
+
+######################################################################
+############################## IMPORTS ###############################
+######################################################################
 import numpy as np
 from inspect import signature
 from scipy.integrate import solve_ivp
@@ -5,13 +20,59 @@ from scipy.integrate import solve_ivp
 from sidmhalo.definitions import GN, Z, integrate
 
 
+######################################################################
+######################## FUNCTION DEFINITIONS ########################
+######################################################################
 # Numerical derivative
 def central_derivative(f, x, dx):
+    r"""
+    Compute the numerical derivative of a function $f$ at point $x$ using the central difference formula.
+
+    Parameters
+    ----------
+    f : callable
+        Function to differentiate.
+    x : float
+        Point at which to evaluate the derivative.
+    dx : float
+        Step size for the finite difference.
+
+    Returns
+    -------
+    float
+        Approximate value of $f'(x)$ using central difference.
+
+    Notes
+    -----
+    Uses the formula:
+
+        f'(x) \approx [f(x + dx) - f(x - dx)] / (2 dx)
+    """
     return (f(x + dx) - f(x - dx)) / (2 * dx)
 
 
 # Baryon contributions to rotation curve
 def Vsq_baryon(Phi_b, r):
+    r"""
+    Compute the baryonic contribution $v^2$ to the circular velocity from the baryon potential $\Phi_b$.
+
+    Parameters
+    ----------
+    Phi_b : callable
+        Baryon potential function. Should be a function of $r$ or $(r, \theta)$.
+    r : float or array-like
+        Radius or array of radii at which to compute the baryonic $v^2$.
+
+    Returns
+    -------
+    float or ndarray
+        The baryonic contribution $v^2$ at each radius $r$.
+
+    Notes
+    -----
+    Computes $v^2 = r \, d\Phi_b/dr$ using a central finite difference for the derivative.
+    If $\Phi_b$ is a function of $(r, \theta)$, evaluates at $\theta = \pi/2$ (the midplane).
+    """
 
     # Baryon potential
     num_Phi_b_variables = len(signature(Phi_b).parameters)
@@ -54,9 +115,31 @@ def Vsq_baryon(Phi_b, r):
 
 
 # Halo contribution to rotation curve for given L,M mode
-
-
 def Vsq_LM(rho_LM, r, L, M=0):
+    r"""
+    Compute the contribution $v^2$ to the circular velocity from the $(L, M)$ multipole of the halo density.
+
+    Parameters
+    ----------
+    rho_LM : callable
+        Function returning the $(L, M)$ multipole of the density at radius $r$.
+    r : float or array-like
+        Radius or array of radii at which to compute the contribution.
+    L : int
+        Spherical harmonic degree $L$.
+    M : int, optional
+        Spherical harmonic order $M$ (default: 0). Only $M=0$ is implemented.
+
+    Returns
+    -------
+    float or ndarray
+        The $(L, M)$ multipole contribution $v^2$ at each radius $r$.
+
+    Notes
+    -----
+    Computes the contribution using the solution to Poisson's equation for the $L$-th multipole.
+    Only $M=0$ (axisymmetric) is currently supported.
+    """
 
     if M != 0:
         raise Exception("M != 0 not implemented.")

@@ -1,3 +1,18 @@
+"""
+definitions.py
+--------------
+Purpose:   Physical constants, default functions, and core integration utilities for the nonspherical SIDM Jeans modeling package.
+Authors:   Sean Tulin, Adam Smith-Orlik
+Contact:   stulin@yorku.ca, asorlik@yorku.ca
+Status:    Stable Version
+Last Edit: 2025-09-16
+
+This file contains physical constants (e.g., $G_N$), default functions (e.g., no_baryons), and robust integration utilities used throughout the package.
+"""
+
+######################################################################
+############################## IMPORTS ###############################
+######################################################################
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -15,6 +30,9 @@ from scipy.integrate import quad, solve_ivp
 GN = 4.302e-6  # km^2/s^2*kpc/Msol
 
 
+######################################################################
+######################## FUNCTION DEFINITIONS ########################
+######################################################################
 # default function for zero baryon density
 def no_baryons(r):
     if np.ndim(r) == 0:

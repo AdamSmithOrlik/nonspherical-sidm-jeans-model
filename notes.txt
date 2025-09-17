@@ -9,6 +9,7 @@ TO DO LIST:
 2. Fix the rotation curve code -> 
 3. Add commented code and documentation -> 
 4. Add simulation integration with Andrews data -> 
+5. Add Einasto profile to cdm.py file -> 
 
 16/09/25
 - Remove findDiff from the package and hardcode the midpoint derivative 
@@ -17,4 +18,6 @@ TO DO LIST:
         - the squashed model's constructor logic in gen.py makes it hard to serialize the right q and Phi_b functions 
         - currently q and Phi_b are not loaded correctly...
 
+- adding comments to code and headers 
+- need to add references to each file 
 - 

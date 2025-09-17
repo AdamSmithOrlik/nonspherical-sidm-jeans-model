@@ -1,3 +1,19 @@
+"""
+classes.py
+----------
+Purpose:   Core class definitions for isothermal, CDM profiles, and the combined profile object.
+           Includes methods for scientific calculations (density, potential, rotation curve, shape).
+Authors:   Sean Tulin, Adam Smith-Orlik
+Contact:   stulin@yorku.ca, asorlik@yorku.ca
+Status:    Active development
+Last Edit: 2025-09-16
+
+This file contains the main class hierarchy for the nonspherical SIDM Jeans modeling package, including serialization logic and scientific methods for profile objects.
+"""
+
+######################################################################
+############################## IMPORTS ###############################
+######################################################################
 import numpy as np
 from inspect import signature
 import inspect
@@ -25,6 +41,9 @@ import sidmhalo.potential as potential
 from sidmhalo.tools import compute_Mb, compute_r_sph_grid
 
 
+######################################################################
+######################### CLASS DEFINITIONS ##########################
+######################################################################
 class profile:
 
     def __init__(self, inner=None, outer=None, q=None):

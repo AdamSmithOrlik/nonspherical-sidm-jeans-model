@@ -1,3 +1,18 @@
+"""
+nonspherical.py
+--------------
+Purpose:   Nonspherical Jeans modeling and relaxation routines for SIDM and CDM halos.
+Authors:   Sean Tulin, Adam Smith-Orlik
+Contact:   stulin@yorku.ca, asorlik@yorku.ca
+Status:    Stable Version
+Last Edit: 2025-09-16
+
+This file contains the main relaxation solver and supporting routines for nonspherical halo modeling in the nonspherical SIDM Jeans modeling package.
+"""
+
+######################################################################
+############################## IMPORTS ###############################
+######################################################################
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -10,12 +25,14 @@ from inspect import signature
 import sidmhalo
 from sidmhalo.definitions import GN, Z, integrate
 from sidmhalo.classes import isothermal_profile, CDM_profile
+from sidmhalo.utils import timed
 
 
 ########################################################################
 ####################### Main relaxation code: ##########################
 # Solve for the isothermal profile given CDM boundary conditions at r1 #
 ########################################################################
+@timed
 def relaxation(
     r1,
     outer_halo,

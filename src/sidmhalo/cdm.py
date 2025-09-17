@@ -1,3 +1,21 @@
+"""
+cdm.py
+------
+Purpose:   NFW profile and adiabatic contraction model definitions for CDM halos. Used as the outer halo in the Jeans model.
+Authors:   Sean Tulin, Adam Smith-Orlik
+Contact:   stulin@yorku.ca, asorlik@yorku.ca
+Status:    Stable Version
+Last Edit: 2025-09-16
+References: [1] Navarro, Frenk & White 1997 (https://arxiv.org/abs/astro-ph/9611107v4)
+            [2] Gnedin et al. 2004 (https://arxiv.org/abs/astro-ph/0406247)
+            [3] Cautun et al. 2014 (https://arxiv.org/abs/1911.04557)
+
+This file contains NFW and adiabatic contraction profile functions, mass/concentration conversions, and related utilities for CDM halos.
+"""
+
+######################################################################
+############################## IMPORTS ###############################
+######################################################################
 import numpy as np
 
 from scipy.interpolate import InterpolatedUnivariateSpline
@@ -5,11 +23,10 @@ from scipy.optimize import fsolve
 
 from sidmhalo.definitions import GN
 
+
 ################
 # NFW profiles #
 ################
-
-
 def rho_NFW(*params, mass_concentration=False):
 
     if mass_concentration == True:
