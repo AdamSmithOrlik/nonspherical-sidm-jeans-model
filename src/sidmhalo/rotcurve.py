@@ -191,11 +191,11 @@ def Vsq_LM(rho_LM, r, L, M=0):
         # print("[Vsq_LM] r_eval:", r_eval)
         # print("[Vsq_LM] rmin:", rmin, "rmax:", rmax)
         # print("[Vsq_LM] L:", L)
-        try:
-            test_rho = [rho_LM(val) for val in r_eval[:3]]
-            # print("[Vsq_LM] rho_LM(r_eval[:3]):", test_rho)
-        except Exception as e:
-            print("[Vsq_LM] Error evaluating rho_LM on r_eval[:3]:", e)
+        # try:
+        #     test_rho = [rho_LM(val) for val in r_eval[:3]]
+        #     # print("[Vsq_LM] rho_LM(r_eval[:3]):", test_rho)
+        # except Exception as e:
+        #     print("[Vsq_LM] Error evaluating rho_LM on r_eval[:3]:", e)
 
         # Calculate integrals
         solution = solve_ivp(

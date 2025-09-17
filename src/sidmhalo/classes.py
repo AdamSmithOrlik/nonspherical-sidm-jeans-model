@@ -18,6 +18,7 @@ import numpy as np
 from inspect import signature
 import inspect
 import os
+import dill
 
 from scipy.integrate import solve_ivp, dblquad
 from scipy.interpolate import (
@@ -846,58 +847,8 @@ class profile:
             raise Exception("r must be 0D or 1D.")
 
     def save(self, filename):
-        import numpy as np
-        import inspect, textwrap
-
-        def serialize_func(f):
-            if f is None:
-                return {"type": "none"}
-            if callable(f):
-                if hasattr(f, "__name__") and f.__name__ == "<lambda>":
-                    raise ValueError(
-                        "Cannot serialize lambda functions. Use a named function."
-                    )
-                if hasattr(f, "__module__") and (
-                    f.__module__ == "__main__" or f.__module__ is None
-                ):
-                    src = inspect.getsource(f)
-                    src = textwrap.dedent(src)
-                    return {"type": "source", "source": src}
-                if hasattr(f, "__name__"):
-                    return {"type": "name", "name": f.__name__}
-            return {"type": "value", "value": f}
-
-        def serialize_obj(obj):
-            if obj is None:
-                return None
-            d = {"class_type": obj.__class__.__name__}
-            # Recursively serialize nested profiles and all function attributes
-            if isinstance(obj, profile):
-                d["inner"] = serialize_obj(getattr(obj, "inner", None))
-                d["outer"] = serialize_obj(getattr(obj, "outer", None))
-                # Always serialize the actual q attribute (function or value)
-                d["q"] = serialize_func(getattr(obj, "q", None))
-            elif isinstance(obj, isothermal_profile):
-                d["y"] = getattr(obj, "y", None)
-                d["params"] = getattr(obj, "params", None)
-                d["r_list"] = getattr(obj, "r_list", None)
-                d["L_list"] = getattr(obj, "L_list", None)
-                d["M_list"] = getattr(obj, "M_list", None)
-                # Always serialize the actual Phi_b attribute (function or value)
-                d["Phi_b"] = serialize_func(getattr(obj, "Phi_b", None))
-            elif isinstance(obj, CDM_profile):
-                d["M200"] = getattr(obj, "M200", None)
-                d["c"] = getattr(obj, "c", None)
-                d["q0"] = getattr(obj, "q0", None)
-                d["AC_prescription"] = getattr(obj, "AC_prescription", None)
-                d["Gnedin_params"] = getattr(obj, "Gnedin_params", None)
-                # Always serialize the actual Phi_b attribute (function or value)
-                d["Phi_b"] = serialize_func(getattr(obj, "Phi_b", None))
-            # Add more as needed for other profile types
-            return d
-
-        data = serialize_obj(self)
-        np.savez(filename, profile_data=data)
+        with open(filename, "wb") as f:
+            dill.dump(self, f, protocol=dill.HIGHEST_PROTOCOL)
 
 
 ############################
@@ -1908,62 +1859,5 @@ class CDM_profile:
 
 
 def load_profile(filename):
-    """
-    Load a profile object (and any nested profiles) from a file, restoring all parameters and functions.
-    Handles q and Phi_b as functions, constants, or None.
-    """
-    import sidmhalo.definitions as definitions
-
-    def deserialize_func(fdict, fallback=None):
-        if fdict is None or fdict.get("type") == "none":
-            return fallback
-        if fdict["type"] == "source":
-            local_vars = {}
-            exec(fdict["source"], globals(), local_vars)
-            func = next(v for v in local_vars.values() if callable(v))
-            return func
-        if fdict["type"] == "name":
-            if hasattr(definitions, fdict["name"]):
-                return getattr(definitions, fdict["name"])
-            else:
-                return fallback
-        if fdict["type"] == "value":
-            return fdict["value"]
-        return fallback
-
-    def deserialize_profile(d):
-        if d is None:
-            return None
-        if d["class_type"] == "profile":
-            inner = deserialize_profile(d["inner"])
-            outer = deserialize_profile(d["outer"])
-            q_val = deserialize_func(d["q"], fallback=None)
-            return profile(inner=inner, outer=outer, q=q_val)
-        elif d["class_type"] == "isothermal_profile":
-            Phi_b = deserialize_func(d["Phi_b"], fallback=definitions.no_baryons)
-            return isothermal_profile(
-                d["y"],
-                d["params"],
-                d["r_list"],
-                Phi_b=Phi_b,
-                L_list=d["L_list"],
-                M_list=d["M_list"],
-            )
-        elif d["class_type"] == "CDM_profile":
-            Phi_b = deserialize_func(d["Phi_b"], fallback=definitions.no_baryons)
-            return CDM_profile(
-                d["M200"],
-                d["c"],
-                q0=d["q0"],
-                Phi_b=Phi_b,
-                AC_prescription=d["AC_prescription"],
-                Gnedin_params=d["Gnedin_params"],
-            )
-        # Add more as needed for other profile types
-        return None
-
-    import numpy as np
-
-    npzfile = np.load(filename, allow_pickle=True)
-    data = npzfile["profile_data"].item()
-    return deserialize_profile(data)
+    with open(filename, "rb") as f:
+        return dill.load(f)

@@ -5,11 +5,14 @@ Descisions:
 - Replaces the deprecated scipy.misc.derivitive 
 
 TO DO LIST:
-1. Add save and load functionlity -> DONE 
-2. Fix the rotation curve code -> 
+1. Add save and load functionlity -> IN PROGRESS 
+2. Fix the rotation curve code -> DONE 
 3. Add commented code and documentation -> 
 4. Add simulation integration with Andrews data -> 
 5. Add Einasto profile to cdm.py file -> 
+6. Work on optimising the code once in stable condition ->
+7. Build units tests for the package -> 
+
 
 16/09/25
 - Remove findDiff from the package and hardcode the midpoint derivative 

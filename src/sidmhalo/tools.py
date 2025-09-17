@@ -127,8 +127,6 @@ def compute_Mb(Phi_b, rmin, rmax, num=100):
 
 
 # Calculate spherically averaged potential
-
-
 def compute_Phi_b_spherical(Mb, rmin, rmax):
     r"""
     Compute the spherically averaged baryon potential $\Phi_b(r)$ from an enclosed mass profile $M_b(r)$.
