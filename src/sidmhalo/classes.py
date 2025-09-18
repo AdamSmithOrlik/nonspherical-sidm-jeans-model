@@ -32,6 +32,7 @@ from scipy.optimize import brentq, fsolve
 from sidmhalo.definitions import GN, Z, integrate, no_baryons
 from sidmhalo.cdm import (
     AC_profiles,
+    Einasto_profiles,
     NFW_profiles,
     mass_concentration_to_NFW_parameters,
     NFW_parameters_to_mass_concentration,
@@ -517,11 +518,11 @@ class profile:
     def Vdm(self, r):
         return np.sqrt(self.Vsq_dm(r))
 
-    def Vsq(self, r):
-        return self.Vsq_baryon(r) + self.Vsq_dm(r)
+    def Vsq(self, r, Lmax=10):
+        return self.Vsq_baryon(r) + self.Vsq_dm(r, Lmax=Lmax)
 
-    def V(self, r):
-        return np.sqrt(self.Vsq(r))
+    def V(self, r, Lmax=10):
+        return np.sqrt(self.Vsq(r, Lmax=Lmax))
 
     def Vsq_LM(self, r, L, M=0, **kwargs):
         rho_LM = self.rho_LM_interp(L, 0, **kwargs)
@@ -1491,25 +1492,59 @@ class CDM_profile:
         **extraneous,
     ):
 
+        # # Check inputs are correct
+        # if len(inputs) != 2:
+        #     raise Exception(
+        #         "inputs must be 'M200,c' (defaults) or 'rhos,rs' (with input_NFW=True)"
+        #     )
+
+        # # Assume input rhos, rs
+        # if input_NFW:
+        #     self.rhos, self.rs = inputs
+        #     self.M200, self.c, self.r200 = NFW_parameters_to_mass_concentration(*inputs)
+        # # Assume input M200, c
+        # else:
+        #     self.M200, self.c = inputs
+        #     self.rhos, self.rs, self.r200 = mass_concentration_to_NFW_parameters(
+        #         *inputs
+        #     )
+
+        # # Virial mass and concentration parameters
+        # M200, c = self.M200, self.c
+
         # Check inputs are correct
-        if len(inputs) != 2:
+        if len(inputs) != 2 and len(inputs) != 3:
             raise Exception(
-                "inputs must be 'M200,c' (defaults) or 'rhos,rs' (with input_NFW=True)"
+                "inputs must be 'M200,c' (defaults) or 'rhos,rs' (with input_NFW=True) or 'M200,c,alpha' (Einasto)."
             )
 
+        if len(inputs) == 3:
+            alpha_flag = True
+        else:
+            alpha_flag = False
         # Assume input rhos, rs
         if input_NFW:
             self.rhos, self.rs = inputs
             self.M200, self.c, self.r200 = NFW_parameters_to_mass_concentration(*inputs)
         # Assume input M200, c
-        else:
+        elif (not input_NFW) and (not alpha_flag):
             self.M200, self.c = inputs
             self.rhos, self.rs, self.r200 = mass_concentration_to_NFW_parameters(
                 *inputs
             )
+        # Assume input M200, c, alpha
+        elif (not input_NFW) and (alpha_flag):
+            self.M200, self.c, self.alpha = inputs
+            self.rhos, self.rs, self.r200 = mass_concentration_to_NFW_parameters(
+                *inputs[:-1]
+            )
+        else:
+            raise Exception("inputs inconsistent with NFW or Einasto profiles.")
 
         # Virial mass and concentration parameters
         M200, c = self.M200, self.c
+        if alpha_flag:
+            alpha = self.alpha
 
         # Nonsphericity
         self.q0 = q0
@@ -1543,11 +1578,28 @@ class CDM_profile:
         else:
             self.M_b = no_baryons
 
+        # # Load spherically symmetric density and enclosed mass functions
+        # # NFW case
+        # if AC_prescription == None:
+        #     rho, M_encl = NFW_profiles(M200, c, mass_concentration=True)
+
+        # # Adiabatic contraction cases
+        # # AC_prescription = 'Gnedin' or 'Cautun'
+        # else:
+        #     rho, M_encl = AC_profiles(
+        #         M200,
+        #         c,
+        #         self.M_b,
+        #         AC_prescription=AC_prescription,
+        #         Gnedin_params=Gnedin_params,
+        #     )
         # Load spherically symmetric density and enclosed mass functions
         # NFW case
-        if AC_prescription == None:
+        if AC_prescription == None and not alpha_flag:
             rho, M_encl = NFW_profiles(M200, c, mass_concentration=True)
-
+        # Einasto case
+        elif AC_prescription == None and alpha_flag:
+            rho, M_encl = Einasto_profiles(M200, c, alpha, mass_concentration=True)
         # Adiabatic contraction cases
         # AC_prescription = 'Gnedin' or 'Cautun'
         else:

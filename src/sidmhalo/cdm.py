@@ -9,6 +9,7 @@ Last Edit: 2025-09-16
 References: [1] Navarro, Frenk & White 1997 (https://arxiv.org/abs/astro-ph/9611107v4)
             [2] Gnedin et al. 2004 (https://arxiv.org/abs/astro-ph/0406247)
             [3] Cautun et al. 2014 (https://arxiv.org/abs/1911.04557)
+            [4] E. Retana-Montenegro et al. 2012 (https://arxiv.org/abs/1202.5242)
 
 This file contains NFW and adiabatic contraction profile functions, mass/concentration conversions, and related utilities for CDM halos.
 """
@@ -20,6 +21,7 @@ import numpy as np
 
 from scipy.interpolate import InterpolatedUnivariateSpline
 from scipy.optimize import fsolve
+from scipy.special import gammainc, gamma
 
 from sidmhalo.definitions import GN
 
@@ -67,6 +69,52 @@ def M_NFW(*params, mass_concentration=False):
 def NFW_profiles(*params, **kwargs):
 
     return rho_NFW(*params, **kwargs), M_NFW(*params, **kwargs)
+
+
+def rho_Einasto(*params, mass_concentration=False):
+    if mass_concentration:
+        M200, c200, alpha = params
+        rho_minus2, r_minus2, r200 = mass_concentration_to_Einasto_parameters(
+            M200, c200, alpha
+        )
+    else:
+        rho_minus2, r_minus2, alpha = params
+        M200, c200, r200 = Einasto_parameters_to_mass_concentration(
+            rho_minus2, r_minus2, alpha
+        )
+
+    def rho_function(r):
+        x = np.asarray(r) / r_minus2
+        return rho_minus2 * np.exp(-(2.0 / alpha) * (x**alpha - 1))
+
+    return rho_function
+
+
+def M_Einasto(*params, mass_concentration=False):
+    if mass_concentration:
+        M200, c200, alpha = params
+        rho_minus2, r_minus2, r200 = mass_concentration_to_Einasto_parameters(
+            M200, c200, alpha
+        )
+    else:
+        rho_minus2, r_minus2, alpha = params
+        M200, c200, r200 = Einasto_parameters_to_mass_concentration(
+            rho_minus2, r_minus2, alpha
+        )
+
+    s = 3.0 / alpha
+    Pc = gammainc(s, (2.0 / alpha) * (c200**alpha))
+
+    def M_function(r):
+        x = (2.0 / alpha) * (np.asarray(r) / r_minus2) ** alpha
+        return M200 * (gammainc(s, x) / Pc)
+
+    return np.vectorize(M_function)
+
+
+def Einasto_profiles(*params, **kwargs):
+
+    return rho_Einasto(*params, **kwargs), M_Einasto(*params, **kwargs)
 
 
 # f_baryon=0.156352 (Cautun et al value)
@@ -224,4 +272,64 @@ def NFW_parameters_to_mass_concentration(
     # Sove for Mvir
     Mvir = del_c * rho_crit * 4 * np.pi / 3 * rvir**3
 
+    return Mvir, c, rvir
+
+
+def _m_c_alpha(c, alpha):
+    a = 3.0 / alpha
+    x = (2.0 / alpha) * (c**alpha)
+
+    # lower incomplete gamma function
+    lower_inc = gamma(a) * gammainc(a, x)
+    prefac = np.exp(2.0 / alpha) / alpha * (2.0 / alpha) ** (-3.0 / alpha)
+    return prefac * lower_inc
+
+
+def mass_concentration_to_Einasto_parameters(
+    Mvir, c, alpha, h=0.7, del_c=200, Omega_m=0.3, Omega_Lambda=0.7, z=0
+):
+    # Constants
+    H0 = h * 100 * 1e-3  # km/kpc/s
+    rho_crit = (3 * H0**2) / (8 * np.pi * GN) * (Omega_m * (1 + z) ** 3 + Omega_Lambda)
+
+    # Virial radius from spherical overdensity
+    rvir = (3 * Mvir / (4 * np.pi * del_c * rho_crit)) ** (1 / 3)
+    r_minus2 = rvir / c
+
+    # Mass factor at c
+    mca = _m_c_alpha(c, alpha)
+
+    # Solve for rho_-2 from Mvir = 4π ρ_-2 r_-2^3 m(c,α)
+    rho_minus2 = Mvir / (4 * np.pi * r_minus2**3 * mca)
+    return rho_minus2, r_minus2, rvir
+
+
+def Einasto_parameters_to_mass_concentration(
+    rho_minus2,
+    r_minus2,
+    alpha,
+    h=0.7,
+    del_c=200,
+    Omega_m=0.3,
+    Omega_Lambda=0.7,
+    z=0,
+    c_init=10.0,
+):
+
+    # Constants
+    H0 = h * 100 * 1e-3  # km/kpc/s
+    rho_crit = (3 * H0**2) / (8 * np.pi * GN) * (Omega_m * (1 + z) ** 3 + Omega_Lambda)
+
+    rhs_coeff = (del_c * rho_crit) / 3.0
+
+    def eqn(c):
+        return rho_minus2 * _m_c_alpha(c, alpha) - rhs_coeff * c**3
+
+    # Solve for concentration
+    c = float(fsolve(eqn, c_init))
+    rvir = c * r_minus2
+
+    # Mvir from either definition
+    Mvir = (4 * np.pi / 3) * del_c * rho_crit * rvir**3
+    # (equivalently: Mvir = 4π ρ_-2 r_-2^3 m(c,α))
     return Mvir, c, rvir
