@@ -8,7 +8,7 @@ TO DO LIST:
 1. Add save and load functionlity -> DONE
 2. Fix the rotation curve code -> DONE 
 3. Add commented code and documentation -> 
-4. Add simulation integration with Andrews data -> 
+4. Add simulation integration with Andrews data -> DONE
 5. Add Einasto profile to cdm.py file -> 
 6. Work on optimising the code once in stable condition ->
 7. Build units tests for the package -> 
@@ -30,3 +30,9 @@ TO DO LIST:
 - added Andrews data to examples 
 - working on simulation.py file and fit class to load the data in examples 
     - need to get finish writing the simulations file and test it
+    - need to add to README how to get the data
+
+18/09/25
+- Work on simulation file 
+- Add Einasto & gNFW profiles to Jeans code 
+- 
