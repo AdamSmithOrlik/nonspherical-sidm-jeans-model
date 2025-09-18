@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "sidmhalo"
-version = "0.1.0"
+version = "0.2.0"
 description = "Nonspherical Jeans modelling for SIDM halos."
 authors = [
   { name = "Sean Tulin", email = "stulin@yorku.ca" },
@@ -24,3 +24,9 @@ dependencies = [
 [project.urls]
 "Source Code" = "https://github.com/AdamSmithOrlik/nonspherical-sidm-jeans-model.git"
 
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["sidmhalo*"]
