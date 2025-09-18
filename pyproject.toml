@@ -26,7 +26,11 @@ dependencies = [
 
 [tool.setuptools]
 package-dir = { "" = "src" }
+include-package-data = true
 
 [tool.setuptools.packages.find]
 where = ["src"]
 include = ["sidmhalo*"]
+
+[tool.setuptools.package-data]
+sidmhalo = ["data/*.csv"]
