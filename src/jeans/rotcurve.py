@@ -17,7 +17,7 @@ import numpy as np
 from inspect import signature
 from scipy.integrate import solve_ivp
 
-from sidmhalo.definitions import GN, Z, integrate
+from .definitions import GN, Z, integrate
 
 
 ######################################################################

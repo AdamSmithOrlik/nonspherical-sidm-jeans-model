@@ -22,10 +22,10 @@ import scipy.sparse as sparse
 
 from inspect import signature
 
-import sidmhalo
-from sidmhalo.definitions import GN, Z, integrate
-from sidmhalo.classes import isothermal_profile, CDM_profile
-from sidmhalo.utils import timed
+from . import spherical as sphmodel
+from .definitions import GN, Z, integrate
+from .classes import isothermal_profile, CDM_profile
+from .utils import timed
 
 
 ########################################################################
@@ -84,7 +84,7 @@ def relaxation(
     Phi_b = outer_halo.Phi_b
 
     # Step 1: Relaxation method with spherical symmetry
-    profile, success_flag = sidmhalo.spherical.relaxation(
+    profile, success_flag = sphmodel.relaxation(
         r1,
         outer_halo,
         init_grid=init_grid,

@@ -1,6 +1,6 @@
-# sidmhalo
+# jeans
 
-**sidmhalo** is a Python package for modeling the structure of dark matter halos using the squashed Jeans model described in [this paper](link). It supports both self-interacting dark matter (SIDM) and cold dark matter (CDM) halos, in spherical and nonspherical geometries. The package provides tools to compute density profiles, rotation curves, shapes, and gravitational potentials for dark matter halos, given a baryon potential, mass, concentration, adiabatic contraction prescription, and outer halo shape profile.
+**jeans** is a Python package for modeling the structure of dark matter halos using the squashed Jeans model described in [this paper](link). It supports both self-interacting dark matter (SIDM) and cold dark matter (CDM) halos, in spherical and nonspherical geometries. The package provides tools to compute density profiles, rotation curves, shapes, and gravitational potentials for dark matter halos, given a baryon potential, mass, concentration, adiabatic contraction prescription, and outer halo shape profile.
 
 This package is intended for researchers and students working in astrophysics and cosmology, especially those interested in the structure and dynamics of dark matter halos.
 
@@ -35,7 +35,7 @@ pip install .
 ## Usage Example
 
 ```python
-import sidmhalo
+import jeans
 
 # Example: create a nonspherical SIDM squashed halo with baryons and adiabatic contraction
 # rm: matching radius
@@ -45,7 +45,7 @@ import sidmhalo
 # Phi_b: baryon potential as a function of (r, th)
 # AC_prescription: prescription for adiabatic contraction
 
-profile = sidmhalo.gen.squashed(rm, M200, c, q0=q0, Phi_b=Phi_b, **{'AC_prescription':'Cautun'})
+profile = jeans.squashed(rm, M200, c, q0=q0, Phi_b=Phi_b, **{'AC_prescription':'Cautun'})
 r = np.logspace(-1, 3, 100)  # kpc
 rho_sph = profile.rho_sph_avg(r)
 

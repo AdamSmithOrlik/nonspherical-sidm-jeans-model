@@ -19,7 +19,7 @@ from scipy.interpolate import InterpolatedUnivariateSpline, RectBivariateSpline
 from scipy.optimize import brentq
 from scipy.integrate import solve_ivp
 
-from sidmhalo.definitions import no_baryons, integrate, GN
+from .definitions import no_baryons, integrate, GN
 
 import time as t
 

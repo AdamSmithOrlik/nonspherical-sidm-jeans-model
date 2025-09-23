@@ -29,18 +29,18 @@ from scipy.interpolate import (
 from scipy.optimize import brentq, fsolve
 
 
-from sidmhalo.definitions import GN, Z, integrate, no_baryons
-from sidmhalo.cdm import (
+from .definitions import GN, Z, integrate, no_baryons
+from .cdm import (
     AC_profiles,
     Einasto_profiles,
     NFW_profiles,
     mass_concentration_to_NFW_parameters,
     NFW_parameters_to_mass_concentration,
 )
-import sidmhalo.rotcurve as rotcurve
-import sidmhalo.potential as potential
+from . import rotcurve as rotcurve
+from . import potential as potential
 
-from sidmhalo.tools import compute_Mb, compute_r_sph_grid
+from .tools import compute_Mb, compute_r_sph_grid
 
 
 ######################################################################

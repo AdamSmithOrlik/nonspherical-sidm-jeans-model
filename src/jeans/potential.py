@@ -19,7 +19,7 @@ from scipy.integrate import solve_ivp
 
 # from scipy.misc import derivative
 
-from sidmhalo.definitions import GN, Z, integrate
+from .definitions import GN, Z, integrate
 
 
 ######################################################################

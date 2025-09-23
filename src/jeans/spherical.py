@@ -23,11 +23,11 @@ from scipy.interpolate import interp1d
 import scipy.sparse as sparse
 import time
 
-from sidmhalo import data
+from . import data
 
-from sidmhalo.definitions import GN, integrate
-from sidmhalo.classes import isothermal_profile
-from sidmhalo.utils import timed
+from .definitions import GN, integrate
+from .classes import isothermal_profile
+from .utils import timed
 
 
 ########################################################################

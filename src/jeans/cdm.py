@@ -23,7 +23,7 @@ from scipy.interpolate import InterpolatedUnivariateSpline
 from scipy.optimize import fsolve
 from scipy.special import gammainc, gamma
 
-from sidmhalo.definitions import GN
+from .definitions import GN
 
 
 ################
