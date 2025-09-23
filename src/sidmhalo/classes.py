@@ -1520,8 +1520,10 @@ class CDM_profile:
 
         if len(inputs) == 3:
             alpha_flag = True
+            self.halo_type = "Einasto"
         else:
             alpha_flag = False
+            self.halo_type = "NFW"
         # Assume input rhos, rs
         if input_NFW:
             self.rhos, self.rs = inputs

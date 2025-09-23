@@ -32,7 +32,7 @@ from sidmhalo.utils import timed
 ####################### Main relaxation code: ##########################
 # Solve for the isothermal profile given CDM boundary conditions at r1 #
 ########################################################################
-@timed
+# @timed # Uncomment to time function
 def relaxation(
     r1,
     outer_halo,

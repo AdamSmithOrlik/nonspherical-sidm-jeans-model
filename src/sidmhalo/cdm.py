@@ -30,7 +30,27 @@ from sidmhalo.definitions import GN
 # NFW profiles #
 ################
 def rho_NFW(*params, mass_concentration=False):
+    r"""
+    Compute the NFW (Navarro-Frenk-White) density profile for a dark matter halo.
 
+    Parameters
+    ----------
+    *params : tuple
+        Either (rho_s, r_s) where rho_s is the characteristic density and r_s is the scale radius,
+        or (M200, c200) if mass_concentration=True, where M200 is the halo mass and c200 is the concentration.
+    mass_concentration : bool, optional
+        If True, interpret *params as (M200, c200) and convert to (rho_s, r_s) internally (default: False).
+
+    Returns
+    -------
+    rho_function : callable
+        Function returning the NFW density profile rho(r) at radius r.
+
+    Notes
+    -----
+    The NFW profile is given by:
+        rho(r) = rho_s / [ (r/r_s) * (1 + r/r_s)^2 ]
+    """
     if mass_concentration == True:
         # Assume inputs are M200,c200
         M200, c200 = params
@@ -47,7 +67,28 @@ def rho_NFW(*params, mass_concentration=False):
 
 
 def M_NFW(*params, mass_concentration=False):
+    r"""
+    Compute the enclosed mass profile M(r) for an NFW (Navarro-Frenk-White) dark matter halo.
 
+    Parameters
+    ----------
+    *params : tuple
+        Either (rho_s, r_s) where rho_s is the characteristic density and r_s is the scale radius,
+        or (M200, c200) if mass_concentration=True, where M200 is the halo mass and c200 is the concentration.
+    mass_concentration : bool, optional
+        If True, interpret *params as (M200, c200) and convert to (rho_s, r_s) internally (default: False).
+
+    Returns
+    -------
+    M_function : callable
+        Function returning the enclosed mass M(r) at radius r for the NFW profile.
+
+    Notes
+    -----
+    The enclosed mass profile is given by:
+        M(r) = 4π rho_s r_s^3 [ln(1 + r/r_s) - r/r_s / (1 + r/r_s)]
+    For small r, a quadratic approximation is used for numerical stability.
+    """
     if mass_concentration == True:
         # Assume inputs are M200,c200
         M200, c200 = params
@@ -72,6 +113,27 @@ def NFW_profiles(*params, **kwargs):
 
 
 def rho_Einasto(*params, mass_concentration=False):
+    r"""
+    Compute the Einasto density profile for a dark matter halo.
+
+    Parameters
+    ----------
+    *params : tuple
+        Either (rho_minus2, r_minus2, alpha) where rho_minus2 is the density at r_minus2, r_minus2 is the scale radius, and alpha is the shape parameter,
+        or (M200, c200, alpha) if mass_concentration=True, where M200 is the halo mass, c200 is the concentration, and alpha is the shape parameter.
+    mass_concentration : bool, optional
+        If True, interpret *params as (M200, c200, alpha) and convert to (rho_minus2, r_minus2, alpha) internally (default: False).
+
+    Returns
+    -------
+    rho_function : callable
+        Function returning the Einasto density profile rho(r) at radius r.
+
+    Notes
+    -----
+    The Einasto profile is given by:
+        rho(r) = rho_minus2 * exp{ - (2/alpha) * [ (r/r_minus2)^alpha - 1 ] }
+    """
     if mass_concentration:
         M200, c200, alpha = params
         rho_minus2, r_minus2, r200 = mass_concentration_to_Einasto_parameters(
@@ -91,6 +153,28 @@ def rho_Einasto(*params, mass_concentration=False):
 
 
 def M_Einasto(*params, mass_concentration=False):
+    r"""
+    Compute the enclosed mass profile M(r) for an Einasto dark matter halo.
+
+    Parameters
+    ----------
+    *params : tuple
+        Either (rho_minus2, r_minus2, alpha) where rho_minus2 is the density at r_minus2, r_minus2 is the scale radius, and alpha is the shape parameter,
+        or (M200, c200, alpha) if mass_concentration=True, where M200 is the halo mass, c200 is the concentration, and alpha is the shape parameter.
+    mass_concentration : bool, optional
+        If True, interpret *params as (M200, c200, alpha) and convert to (rho_minus2, r_minus2, alpha) internally (default: False).
+
+    Returns
+    -------
+    M_function : callable
+        Function returning the enclosed mass M(r) at radius r for the Einasto profile.
+
+    Notes
+    -----
+    The enclosed mass profile is given by:
+        M(r) = M200 * [ gammainc(3/alpha, (2/alpha)*(r/r_minus2)^alpha) / gammainc(3/alpha, (2/alpha)*c200^alpha) ]
+    where gammainc is the lower incomplete gamma function. The normalization ensures M(r200) = M200.
+    """
     if mass_concentration:
         M200, c200, alpha = params
         rho_minus2, r_minus2, r200 = mass_concentration_to_Einasto_parameters(
@@ -127,7 +211,36 @@ def Einasto_profiles(*params, **kwargs):
 def AC_profiles(
     M200, c200, M_baryon, AC_prescription="Cautun", Gnedin_params=(1.6, 0.8)
 ):
+    r"""
+    Compute adiabatically contracted (AC) NFW profiles for a dark matter halo, including baryonic effects.
 
+    Parameters
+    ----------
+    M200 : float
+        Halo mass within r200 (in solar masses).
+    c200 : float
+        Concentration parameter of the NFW halo.
+    M_baryon : callable
+        Function returning the enclosed baryon mass M_b(r) at radius r.
+    AC_prescription : {'Cautun', 'Gnedin'}, optional
+        Choice of adiabatic contraction model (default: 'Cautun').
+        'Cautun' uses the prescription from Cautun et al. (2019),
+        'Gnedin' uses the Gnedin et al. (2004) iterative model.
+    Gnedin_params : tuple, optional
+        Parameters (A0, w) for the Gnedin model (default: (1.6, 0.8)).
+
+    Returns
+    -------
+    rho_function : callable
+        Function returning the contracted DM density profile rho(r).
+    M_function : callable
+        Function returning the contracted DM enclosed mass profile M(r).
+
+    Notes
+    -----
+    This function modifies the NFW profile to account for baryonic contraction using either the Cautun or Gnedin prescription.
+    The returned functions are suitable for use as outer halo profiles in Jeans modeling.
+    """
     rho_s, rs, r200 = mass_concentration_to_NFW_parameters(M200, c200)
 
     # Use cosmological baryon fraction, not estimated value
@@ -232,12 +345,42 @@ def AC_profiles(
 ###################
 # Other functions #
 ###################
-
-
 def mass_concentration_to_NFW_parameters(
     Mvir, c, h=0.7, del_c=200, Omega_m=0.3, Omega_Lambda=0.7, z=0
 ):
+    r"""
+    Convert halo mass and concentration to NFW profile parameters.
 
+    Parameters
+    ----------
+    Mvir : float
+        Virial mass of the halo (in solar masses).
+    c : float
+        Concentration parameter of the halo.
+    h : float, optional
+        Dimensionless Hubble parameter (default: 0.7).
+    del_c : float, optional
+        Overdensity parameter (default: 200).
+    Omega_m : float, optional
+        Matter density parameter (default: 0.3).
+    Omega_Lambda : float, optional
+        Cosmological constant density parameter (default: 0.7).
+    z : float, optional
+        Redshift (default: 0).
+
+    Returns
+    -------
+    rhos : float
+        Characteristic density of the NFW profile.
+    rs : float
+        Scale radius of the NFW profile.
+    rvir : float
+        Virial radius of the halo.
+
+    Notes
+    -----
+    This function uses the standard NFW relations to convert mass and concentration to profile parameters.
+    """
     # Constants
     H0 = h * 100 * 1e-3  # km/kpc/s
     rho_crit = (3 * H0**2) / (8 * np.pi * GN) * (Omega_m * (1 + z) ** 3 + Omega_Lambda)
@@ -256,7 +399,39 @@ def mass_concentration_to_NFW_parameters(
 def NFW_parameters_to_mass_concentration(
     rhos, rs, h=0.7, del_c=200, Omega_m=0.3, Omega_Lambda=0.7, z=0
 ):
+    r"""
+    Convert NFW profile parameters to halo mass and concentration.
 
+    Parameters
+    ----------
+    rhos : float
+        Characteristic density of the NFW profile.
+    rs : float
+        Scale radius of the NFW profile.
+    h : float, optional
+        Dimensionless Hubble parameter (default: 0.7).
+    del_c : float, optional
+        Overdensity parameter (default: 200).
+    Omega_m : float, optional
+        Matter density parameter (default: 0.3).
+    Omega_Lambda : float, optional
+        Cosmological constant density parameter (default: 0.7).
+    z : float, optional
+        Redshift (default: 0).
+
+    Returns
+    -------
+    Mvir : float
+        Virial mass of the halo (in solar masses).
+    c : float
+        Concentration parameter of the halo.
+    rvir : float
+        Virial radius of the halo.
+
+    Notes
+    -----
+    This function numerically inverts the NFW relations to recover mass and concentration from profile parameters.
+    """
     # Constants
     H0 = h * 100 * 1e-3  # km/kpc/s
     rho_crit = (3 * H0**2) / (8 * np.pi * GN) * (Omega_m * (1 + z) ** 3 + Omega_Lambda)
@@ -288,6 +463,41 @@ def _m_c_alpha(c, alpha):
 def mass_concentration_to_Einasto_parameters(
     Mvir, c, alpha, h=0.7, del_c=200, Omega_m=0.3, Omega_Lambda=0.7, z=0
 ):
+    r"""
+    Convert halo mass, concentration, and shape parameter to Einasto profile parameters.
+
+    Parameters
+    ----------
+    Mvir : float
+        Virial mass of the halo (in solar masses).
+    c : float
+        Concentration parameter of the halo.
+    alpha : float
+        Einasto shape parameter.
+    h : float, optional
+        Dimensionless Hubble parameter (default: 0.7).
+    del_c : float, optional
+        Overdensity parameter (default: 200).
+    Omega_m : float, optional
+        Matter density parameter (default: 0.3).
+    Omega_Lambda : float, optional
+        Cosmological constant density parameter (default: 0.7).
+    z : float, optional
+        Redshift (default: 0).
+
+    Returns
+    -------
+    rho_minus2 : float
+        Density at the scale radius r_minus2.
+    r_minus2 : float
+        Scale radius where the logarithmic slope is -2.
+    rvir : float
+        Virial radius of the halo.
+
+    Notes
+    -----
+    This function uses the standard Einasto relations to convert mass, concentration, and shape to profile parameters.
+    """
     # Constants
     H0 = h * 100 * 1e-3  # km/kpc/s
     rho_crit = (3 * H0**2) / (8 * np.pi * GN) * (Omega_m * (1 + z) ** 3 + Omega_Lambda)
@@ -299,7 +509,7 @@ def mass_concentration_to_Einasto_parameters(
     # Mass factor at c
     mca = _m_c_alpha(c, alpha)
 
-    # Solve for rho_-2 from Mvir = 4π ρ_-2 r_-2^3 m(c,α)
+    # Solve for rho_-2 from Mvir = 4π rho_-2 r_-2^3 m(c,alpha)
     rho_minus2 = Mvir / (4 * np.pi * r_minus2**3 * mca)
     return rho_minus2, r_minus2, rvir
 
@@ -315,7 +525,43 @@ def Einasto_parameters_to_mass_concentration(
     z=0,
     c_init=10.0,
 ):
+    r"""
+    Convert Einasto profile parameters to halo mass, concentration, and shape parameter.
 
+    Parameters
+    ----------
+    rho_minus2 : float
+        Density at the scale radius r_minus2.
+    r_minus2 : float
+        Scale radius where the logarithmic slope is -2.
+    alpha : float
+        Einasto shape parameter.
+    h : float, optional
+        Dimensionless Hubble parameter (default: 0.7).
+    del_c : float, optional
+        Overdensity parameter (default: 200).
+    Omega_m : float, optional
+        Matter density parameter (default: 0.3).
+    Omega_Lambda : float, optional
+        Cosmological constant density parameter (default: 0.7).
+    z : float, optional
+        Redshift (default: 0).
+    c_init : float, optional
+        Initial guess for concentration (default: 10.0).
+
+    Returns
+    -------
+    Mvir : float
+        Virial mass of the halo (in solar masses).
+    c : float
+        Concentration parameter of the halo.
+    rvir : float
+        Virial radius of the halo.
+
+    Notes
+    -----
+    This function numerically inverts the Einasto relations to recover mass and concentration from profile parameters.
+    """
     # Constants
     H0 = h * 100 * 1e-3  # km/kpc/s
     rho_crit = (3 * H0**2) / (8 * np.pi * GN) * (Omega_m * (1 + z) ** 3 + Omega_Lambda)
