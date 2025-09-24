@@ -1,3 +1,6 @@
+from analytic_potentials import Phi_MN
+
+
 run_dictionary = {
     "r1": 10.0,  # kpc. Matching radius for SIDM and CDM halos. If r1=0 CDM halo is returned.
     "M200": 1e12,  # Msun
@@ -11,10 +14,34 @@ run_dictionary = {
         0.8,
     ),  # Only used if AC_prescription='Gnedin'. (A, w) parameters.
     "save_profile": True,  # If True, saves the profile to a .npz file.
-    "save_dir": "profiles/",  # Directory to save the profile .npz file.
-    "nonspherical_model": "squashed",  # Options: 'squashed' or 'isothermal'.
-    "verbose": True,  # If True, prints progress and warnings.
+    "save_dir": "data/",  # Directory to save the profile .npz file.
+    "model": "spherical",  # Options: 'spherical', 'cdm', 'squashed' or 'isothermal'. Setting to cdm will override r1 st r1=0. Setting to spherical will override q0 so that q0=1.
+    "verbose": False,  # If True, prints progress and warnings.
     "L_list": [0],  # Angular momentum modes to include in the isothermal model.
     "M_list": [0],  # M > 0 not yet implemented.
-    "q_mode": "smooth",  # Only used if nonspherical_model='squashed'. Options: 'uniform' or 'smooth'.
+    "q_mode": "smooth",  # Only used if model='squashed'. Options: 'uniform' or 'smooth'.
 }
+
+
+# Baryon potential function
+Md = 6e10  # Msun
+a = 3.0  # kpc
+b = 0.28  # kpc
+
+Phi_b = Phi_MN(Md, a, b)  # Miyamoto-Nagai potential function
+# update the run dictionary
+# run_dictionary["Phi_b"] = Phi_b
+
+# CDM halo shape function
+q0 = 0.8  # Dimensionless. Outer halo shape.
+r200 = 200  # kpc. Virial radius.
+gamma = 0.2  # Dimensionless. Shape parameter.
+
+
+# Non-constant CDM halo shape function
+def q_cdm(q0, r200=200, gamma=0.3):
+    return lambda r: q0 * (r / r200) ** gamma
+
+
+# update the run dictionary
+# run_dictionary["q0"] = q_cdm(q0, r200, gamma)

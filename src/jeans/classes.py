@@ -616,7 +616,9 @@ class profile:
 
             rho = self.rho_sph
             r = lambda th, q: r_eff / np.sqrt(
-                (np.sin(th) * q ** (2 / 3)) ** 2 + (np.cos(th) * q ** (-1 / 3)) ** 2
+                # (np.sin(th) * q ** (2 / 3)) ** 2 + (np.cos(th) * q ** (-1 / 3)) ** 2
+                (np.sin(th) * q ** (1 / 3)) ** 2
+                + (np.cos(th) * q ** (-2 / 3)) ** 2
             )
 
             if method == "iterate":
@@ -631,7 +633,7 @@ class profile:
                         * np.sin(th)
                         * np.cos(th) ** 2
                         * rho(r(th, q_old), th)
-                        * r(th, q_old) ** 4
+                        * r(th, q_old) ** 5
                     )
                     I_zz = integrate(integrand, 0, np.pi)
 
@@ -639,7 +641,7 @@ class profile:
                         lambda th: np.sin(th)
                         * np.sin(th) ** 2
                         * rho(r(th, q_old), th)
-                        * r(th, q_old) ** 4
+                        * r(th, q_old) ** 5
                     )
                     I_RR = integrate(integrand, 0, np.pi)
 
@@ -1484,6 +1486,7 @@ class CDM_profile:
         self,
         *inputs,
         q0=1,
+        alpha=None,
         M_b=None,
         Phi_b=None,
         AC_prescription=None,
@@ -1513,39 +1516,38 @@ class CDM_profile:
         # M200, c = self.M200, self.c
 
         # Check inputs are correct
-        if len(inputs) != 2 and len(inputs) != 3:
+        if len(inputs) != 2:
             raise Exception(
-                "inputs must be 'M200,c' (defaults) or 'rhos,rs' (with input_NFW=True) or 'M200,c,alpha' (Einasto)."
+                "inputs must be 'M200,c' (defaults) or 'rhos,rs' (with input_NFW=True)."
             )
 
-        if len(inputs) == 3:
-            alpha_flag = True
+        if alpha:
             self.halo_type = "Einasto"
         else:
-            alpha_flag = False
             self.halo_type = "NFW"
+
         # Assume input rhos, rs
         if input_NFW:
             self.rhos, self.rs = inputs
             self.M200, self.c, self.r200 = NFW_parameters_to_mass_concentration(*inputs)
         # Assume input M200, c
-        elif (not input_NFW) and (not alpha_flag):
+        elif (not input_NFW) and (not alpha):
             self.M200, self.c = inputs
             self.rhos, self.rs, self.r200 = mass_concentration_to_NFW_parameters(
                 *inputs
             )
         # Assume input M200, c, alpha
-        elif (not input_NFW) and (alpha_flag):
-            self.M200, self.c, self.alpha = inputs
+        elif (not input_NFW) and (alpha):
+            self.M200, self.c, self.alpha = inputs + (alpha,)  # inputs is a tuple
             self.rhos, self.rs, self.r200 = mass_concentration_to_NFW_parameters(
-                *inputs[:-1]
+                *inputs
             )
         else:
             raise Exception("inputs inconsistent with NFW or Einasto profiles.")
 
         # Virial mass and concentration parameters
         M200, c = self.M200, self.c
-        if alpha_flag:
+        if alpha:
             alpha = self.alpha
 
         # Nonsphericity
@@ -1597,10 +1599,10 @@ class CDM_profile:
         #     )
         # Load spherically symmetric density and enclosed mass functions
         # NFW case
-        if AC_prescription == None and not alpha_flag:
+        if AC_prescription == None and not alpha:
             rho, M_encl = NFW_profiles(M200, c, mass_concentration=True)
         # Einasto case
-        elif AC_prescription == None and alpha_flag:
+        elif AC_prescription == None and alpha:
             rho, M_encl = Einasto_profiles(M200, c, alpha, mass_concentration=True)
         # Adiabatic contraction cases
         # AC_prescription = 'Gnedin' or 'Cautun'
