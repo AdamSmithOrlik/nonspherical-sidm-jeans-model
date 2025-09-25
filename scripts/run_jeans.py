@@ -5,7 +5,6 @@ import jeans
 import datetime as dt
 import time as t
 
-sys.path.append("../configs")
 from run_dict import run_dictionary as rd
 
 
@@ -39,9 +38,9 @@ def main(rd, filename=None):
             **ac_input_dict,
         )
         if profile:
-            print(f"Profile computed in {t.time() - start:.2f} seconds.")
+            print(f"Spherical profile generated successfully.")
         else:
-            print("Profile computation failed.")
+            print("Spherical profile computation failed.")
             return None
     elif rd["model"] == "cdm":
         rd["r1"] = 0.0  # override r1 so that CDM halo is assumed
@@ -57,9 +56,9 @@ def main(rd, filename=None):
             **ac_input_dict,
         )
         if profile:
-            print(f"Profile computed in {t.time() - start:.2f} seconds.")
+            print(f"CDM profile generated successfully.")
         else:
-            print("Profile computation failed.")
+            print("CDM profile computation failed.")
             return None
 
     elif rd["model"] == "squashed":
@@ -76,9 +75,9 @@ def main(rd, filename=None):
             **ac_input_dict,
         )
         if profile:
-            print(f"Profile computed in {t.time() - start:.2f} seconds.")
+            print(f"Squashed profile generated successfully.")
         else:
-            print("Profile computation failed.")
+            print("Squashed profile computation failed.")
             return None
     elif rd["model"] == "isothermal":
         print("Running isothermal model...")
@@ -95,15 +94,18 @@ def main(rd, filename=None):
             **ac_input_dict,
         )
         if profile:
-            print(f"Profile computed in {t.time() - start:.2f} seconds.")
+            print(f"Isothermal profile generated successfully.")
         else:
-            print("Profile computation failed.")
+            print("Isothermal profile computation failed.")
             return None
     else:
         print(
             "Error: model not recognized. Choose from 'spherical', 'cdm', 'squashed' or 'isothermal'."
         )
-        return None
+        return profile
+
+    end = t.time()
+    print(f"Time taken to generate profile: {end - start:.2f} seconds")
 
     if rd["save_profile"]:
         if filename is None:
@@ -123,11 +125,16 @@ def run_jeans_multi(rd, key="r1", values=[0, 5, 10]):
     for val in values:
         rd[key] = val
         print(f"Running model with {key}={val}")
-        main(rd)
+        profile = main(rd)
+        if profile:
+            print(f"Model with {key}={val} completed successfully.\n")
+        else:
+            print(f"Model with {key}={val} failed.\n")
+    return None
 
 
 if __name__ == "__main__":
     filename = None  # specify for a custom filename
 
-    # main(rd)
-    run_jeans_multi(rd, key="r1", values=[0, 5, 10])
+    main(rd)
+    # run_jeans_multi(rd, key="r1", values=[0, 5, 10])

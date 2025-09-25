@@ -1,9 +1,4 @@
-import numpy as np
-
-# from jeans.classes import profile, CDM_profile, isothermal_profile
-# import jeans.tools
-# import jeans.spherical
-# import jeans.nonspherical
+import dill
 
 from .classes import profile, CDM_profile, isothermal_profile
 from . import tools
@@ -136,3 +131,9 @@ def cdm(*outer_halo_params, q0=1, Phi_b=None, **kwargs):
 
     # Return profile object squashed by q0
     return profile(outer=outer_halo, q=q0)
+
+
+# Load a pickled profile object
+def load(filename):
+    with open(filename, "rb") as f:
+        return dill.load(f)

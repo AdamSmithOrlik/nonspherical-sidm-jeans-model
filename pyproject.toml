@@ -36,3 +36,6 @@ include = ["jeans*"]
 
 [tool.setuptools.package-data]
 jeans = ["data/*.csv"]
+
+[tool.black]
+line-length = 120
