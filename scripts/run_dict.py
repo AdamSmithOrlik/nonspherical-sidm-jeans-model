@@ -1,24 +1,71 @@
-from analytic_potentials import Phi_MN
+"""
+run_dict.py
+-----------
+This is the main configuration file for the nonspherical SIDM Jeans modeling package.
+
+Edit this file to define and customize your dark matter halo and baryon profile models.
+
+Instructions:
+- Modify the `run_dictionary` below to set model parameters, halo properties, and options.
+- If r1, M200, c, q0, or alpha are set to scalars, the run script will generate a single profile.
+- If r1, M200, c, q0, or alpha are set to lists or arrays, the run script will scan over all combinations of parameters.
+- Define or import your baryon potential functions as needed.
+- Define a custom halo shape function if desired.
+- Uncomment and update lines as necessary to include your custom functions or settings.
+- Save and run your run_jeans.py with 'python run_jeans.py' to generate and save profiles using these settings.
+
+For more information, see the documentation or example notebooks.
+"""
+
+from analytic_potentials import Phi_MN  # Add any custom baryon potential functions here
+import numpy as np
+
 
 # fmt: off
+
+###################### DICTIONARY CONFIGURATION ######################
+# EXAMPLE RUN DICTIONARY. EDIT THIS TO SET PARAMETERS AND OPTIONS.
+
+# run_dictionary = {
+#     "model": "spherical",  # Options: 'spherical', 'cdm', 'squashed' or 'isothermal'. Setting to cdm will override r1 st r1=0. Setting to spherical will override q0 so that q0=1.
+#     "r1": 10,  # kpc. Matching radius for SIDM and CDM halos. If r1=0 CDM halo is returned.
+#     "M200": 1e12,  # Msun
+#     "c": 10.0,  # Dimensionless. Concentration parameter. c = r200/rs.
+#     "q0": 1.0,  # Dimensionless. Initial outer halo shape. If q0=1, spherical halo is assumed.
+#     "alpha": None,  # Dimensionless. Halo flattening parameter for Einasto profile. If None, NFW profile is used.
+#     "Phi_b": None,  # (km/s)^2. Baryon potential. Must be a function with signature Phi_b(r, theta), even if spherical.
+#     "AC_prescription": None,  # Adiabatic contraction prescription. Options: 'Cautun' or 'Gnedin'.
+#     "Gnedin_params": (1.6, 0.8,),  # Only used if AC_prescription='Gnedin'. (A, w) parameters.
+#     "save_profile": True,  # If True, saves the profile to a .npz file.
+#     "save_dir": "data/",  # Relative path to save the profile .npz file.
+#     "verbose": False,  # If True, prints progress and warnings.
+#     "L_list": [0],  # Angular momentum modes to include in the isothermal model.
+#     "M_list": [0],  # M > 0 not yet implemented.
+#     "q_mode": "smooth",  # Only used if model='squashed'. Options: 'uniform' or 'smooth'.
+# }
+
+# EXAMPLE SCAN DICTIONARY. ONE OR MULTIPLE PARAMETERS CAN BE SET TO A LIST OR ARRAY TO SCAN OVER.
+# SCANABLE PARAMETERS: r1, M200, c, q0, alpha
+
 run_dictionary = {
-    "model": "spherical",  # Options: 'spherical', 'cdm', 'squashed' or 'isothermal'. Setting to cdm will override r1 st r1=0. Setting to spherical will override q0 so that q0=1.
-    "r1": 10.0,  # kpc. Matching radius for SIDM and CDM halos. If r1=0 CDM halo is returned.
-    "M200": 1e12,  # Msun
-    "c": 10.0,  # Dimensionless. Concentration parameter. c = r200/rs.
-    "q0": 1.0,  # Dimensionless. Initial outer halo shape. If q0=1, spherical halo is assumed.
-    "alpha": None,  # Dimensionless. Halo flattening parameter for Einasto profile. If None, NFW profile is used.
-    "Phi_b": None,  # (km/s)^2. Baryon potential. Must be a function with signature Phi_b(r, theta), even if spherical.
-    "AC_prescription": None,  # Adiabatic contraction prescription. Options: 'Cautun' or 'Gnedin'.
-    "Gnedin_params": (1.6, 0.8,),  # Only used if AC_prescription='Gnedin'. (A, w) parameters.
-    "save_profile": True,  # If True, saves the profile to a .npz file.
-    "save_dir": "data/",  # Relative path to save the profile .npz file.
-    "verbose": False,  # If True, prints progress and warnings.
-    "L_list": [0],  # Angular momentum modes to include in the isothermal model.
-    "M_list": [0],  # M > 0 not yet implemented.
-    "q_mode": "smooth",  # Only used if model='squashed'. Options: 'uniform' or 'smooth'.
+    "model": "spherical", 
+    "r1": [10,20,30], 
+    "M200": 1e12, 
+    "c": 10.0,  
+    "q0": 1.0, 
+    "alpha": None, 
+    "Phi_b": None, 
+    "AC_prescription": None,  
+    "Gnedin_params": (1.6, 0.8,), 
+    "save_profile": True, 
+    "save_dir": "data/",  
+    "verbose": False,  
+    "L_list": [0],  
+    "M_list": [0],  
+    "q_mode": "smooth"
 }
 
+###################### FUNCTION CONFIGURATION ######################
 # Baryon potential function
 Md = 6e10  # Msun
 a = 3.0  # kpc
