@@ -18,6 +18,7 @@ from inspect import signature
 from scipy.interpolate import InterpolatedUnivariateSpline, RectBivariateSpline
 from scipy.optimize import brentq
 from scipy.integrate import solve_ivp
+import dill
 
 from .definitions import no_baryons, integrate, GN
 from .utils import timed
@@ -26,6 +27,12 @@ from .utils import timed
 ######################################################################
 ######################## FUNCTION DEFINITIONS ########################
 ######################################################################
+# Load a pickled profile object
+def load(filename):
+    with open(filename, "rb") as f:
+        return dill.load(f)
+
+
 # Compute baryon enclosed mass profile from baryon potential
 def compute_Mb(Phi_b, rmin, rmax, num=100):
     r"""
@@ -162,9 +169,7 @@ def compute_Phi_b_spherical(Mb, rmin, rmax):
     # Boundary condition y(rmin) = 0.5*GN*M(rmin)/rmin
     # Assuming constant density sphere for r < rmin
     ymin = 0.5 * GN * Mmin / rmin
-    solution = solve_ivp(
-        RHS, [rmin, rmax], [ymin], dense_output=True, atol=1e-8, rtol=1e-8
-    )
+    solution = solve_ivp(RHS, [rmin, rmax], [ymin], dense_output=True, atol=1e-8, rtol=1e-8)
     y_int = solution.sol
     ymax = y_int(rmax)[0]
 
@@ -248,12 +253,7 @@ def compute_log_q_baryon_old(sph_halo, grid=None, R0=0, z0=0, **extraneous):
         th1_list = np.arctan2(R_list, z0)
         th2_list = np.arctan2(R_list, -z0)
         Phi_radial_slice = np.abs(
-            np.array(
-                [
-                    0.5 * (Phi_b(r, th1) + Phi_b(r, th2))
-                    for r, th1, th2 in zip(r_list, th1_list, th2_list)
-                ]
-            )
+            np.array([0.5 * (Phi_b(r, th1) + Phi_b(r, th2)) for r, th1, th2 in zip(r_list, th1_list, th2_list)])
         )
 
         z_list = np.array(grid)
@@ -261,20 +261,11 @@ def compute_log_q_baryon_old(sph_halo, grid=None, R0=0, z0=0, **extraneous):
         th1_list = np.arctan2(R0, z_list)
         th2_list = np.arctan2(R0, -z_list)
         Phi_axial_slice = np.abs(
-            np.array(
-                [
-                    0.5 * (Phi_b(r, th1) + Phi_b(r, th2))
-                    for r, th1, th2 in zip(r_list, th1_list, th2_list)
-                ]
-            )
+            np.array([0.5 * (Phi_b(r, th1) + Phi_b(r, th2)) for r, th1, th2 in zip(r_list, th1_list, th2_list)])
         )
 
-        log_Phi_radial_interp = InterpolatedUnivariateSpline(
-            np.log(R_list), np.log(Phi_radial_slice), ext=3
-        )
-        log_Phi_axial_interp = InterpolatedUnivariateSpline(
-            np.log(z_list), np.log(Phi_axial_slice), ext=3
-        )
+        log_Phi_radial_interp = InterpolatedUnivariateSpline(np.log(R_list), np.log(Phi_radial_slice), ext=3)
+        log_Phi_axial_interp = InterpolatedUnivariateSpline(np.log(z_list), np.log(Phi_axial_slice), ext=3)
 
         rmin = 2 * np.amax([R0, z0, grid[0]])
         rmax = grid[-1]
@@ -424,21 +415,14 @@ def compute_log_q_baryon(halo, num=100, method="exact", **extraneous):
             Phi_b_sph_avg = 0.5 * integrate(integrand, 0, np.pi)
 
             # Integrand
-            integrand = (
-                lambda th: np.sin(th)
-                * P2(np.cos(th))
-                * np.exp(-(Phi_b(r, th) - Phi_b_sph_avg) / sigma0**2)
-            )
+            integrand = lambda th: np.sin(th) * P2(np.cos(th)) * np.exp(-(Phi_b(r, th) - Phi_b_sph_avg) / sigma0**2)
             return integrate(integrand, 0, np.pi)
 
         prefactor = 15 / 4 * (GN * M_b(r_list) / r_list / sigma0**2) ** -1
         log_qb_list = prefactor * np.array([integral(r) for r in r_list])
 
     else:
-        raise Exception(
-            "Case with num_variables=%d or method=%s not supported."
-            % (num_variables, method)
-        )
+        raise Exception("Case with num_variables=%d or method=%s not supported." % (num_variables, method))
 
     # Make interpolation function
     log_qb_interp = InterpolatedUnivariateSpline(np.log(r_list), log_qb_list)
@@ -525,9 +509,7 @@ def compute_q_iso_old(sph_halo, q0_func=None, rm_param=0.9, q_model=None, **kwar
         rhom = sph_halo.rho_sph(r1 * rm_param)
         rho0 = sph_halo.rho_sph(0)
         q0 = q0_func(r1 * rm_param)
-        qdm = np.exp(
-            3 * rhom / rho0 * np.log(q0) / (2 + 3 * rhom / rho0)
-        ) * np.ones_like(r)
+        qdm = np.exp(3 * rhom / rho0 * np.log(q0) / (2 + 3 * rhom / rho0)) * np.ones_like(r)
 
     if not (q_model):
 
@@ -545,9 +527,7 @@ def compute_q_iso_old(sph_halo, q0_func=None, rm_param=0.9, q_model=None, **kwar
 
 
 @timed
-def compute_q_iso(
-    halo, rmin=None, rmax=None, extrap_method="constant", q0=None, max_iter=10, **kwargs
-):
+def compute_q_iso(halo, rmin=None, rmax=None, extrap_method="constant", q0=None, max_iter=10, **kwargs):
     r"""
     Compute the isothermal nonsphericity profile $q_{\rm iso}(r)$ for a given halo (modern method).
 
@@ -625,12 +605,8 @@ def compute_q_iso(
 
         # Assumes power-law function
         log_q_outer = lambda r: np.log(q0(r))
-        alpha = (log_q_outer(r_list[1]) - log_q_outer(r_list[0])) / (
-            log_r_list[1] - log_r_list[0]
-        )
-        integral = rho_dm(r1) * log_q_outer(r1) - alpha * integrate(
-            lambda r: rho_dm(r) / r, r1, r200
-        )
+        alpha = (log_q_outer(r_list[1]) - log_q_outer(r_list[0])) / (log_r_list[1] - log_r_list[0])
+        integral = rho_dm(r1) * log_q_outer(r1) - alpha * integrate(lambda r: rho_dm(r) / r, r1, r200)
 
         def log_q_iso_outer(r):
 
@@ -673,15 +649,11 @@ def compute_q_iso(
         H_solution = solve_ivp(dH_dr, [rmin, rmax], [0], t_eval=r_list)
         G_vals = H_solution.y[0][-1] - H_solution.y[0]
 
-        log_q_iso_inner_list = (
-            -4 * np.pi / (5 * Mtot(r_list)) * (F_vals / r_list**2 + r_list**3 * G_vals)
-        )
+        log_q_iso_inner_list = -4 * np.pi / (5 * Mtot(r_list)) * (F_vals / r_list**2 + r_list**3 * G_vals)
 
         # Make interpolation function for inner halo contribution to shape
         # Raises error if evaluated beyond limits of interpolation
-        inner_halo_interp = InterpolatedUnivariateSpline(
-            log_r_list, log_q_iso_inner_list, ext=2
-        )
+        inner_halo_interp = InterpolatedUnivariateSpline(log_r_list, log_q_iso_inner_list, ext=2)
 
         def log_q_iso_inner(r):
 
@@ -697,9 +669,7 @@ def compute_q_iso(
                 if (r < rmin) and (extrap_method == "linear"):
                     x = log_r_list[:2]
                     y = log_q_iso_inner_list[:2]
-                    return (y[1] * (log_r - x[0]) + y[0] * (x[1] - log_r)) / (
-                        x[1] - x[0]
-                    )
+                    return (y[1] * (log_r - x[0]) + y[0] * (x[1] - log_r)) / (x[1] - x[0])
 
                 # Extrapolates with constant for r < rmin
                 elif (r < rmin) and (extrap_method == "constant"):
@@ -726,9 +696,7 @@ def compute_q_iso(
 
     # Raise exception for loop completes without converging
     else:
-        raise Exception(
-            "Calculation of q_iso did not converge after %d iterations." % max_iter
-        )
+        raise Exception("Calculation of q_iso did not converge after %d iterations." % max_iter)
 
     return lambda r: np.exp(log_q_iso(r))
 
@@ -843,9 +811,7 @@ def compute_r_sph_grid(outer_halo, q_func, numr=30, numth=20):
         rsph_old = r
         for i in range(max_iter):
 
-            rsph_new_calculated = np.sqrt(
-                R**2 * q_func(rsph_old) ** (2 / 3) + z**2 * q_func(rsph_old) ** (-4 / 3)
-            )
+            rsph_new_calculated = np.sqrt(R**2 * q_func(rsph_old) ** (2 / 3) + z**2 * q_func(rsph_old) ** (-4 / 3))
 
             rsph_new = (1 - k) * rsph_old + k * rsph_new_calculated
 

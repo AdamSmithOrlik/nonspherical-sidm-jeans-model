@@ -1,5 +1,3 @@
-import dill
-
 from .classes import profile, CDM_profile, isothermal_profile
 from . import tools
 from . import spherical as sphmodel
@@ -23,15 +21,11 @@ def spherical(r1, *outer_halo_params, Phi_b=None, **kwargs):
         outer_halo = CDM_profile(*outer_halo_params, q0=1, Phi_b=Phi_b, **kwargs)
 
         # Compute spherically averaged potential from enclosed mass profile (computed within outer_halo)
-        Phi_b_sph = tools.compute_Phi_b_spherical(
-            outer_halo.M_b, 1e-6 * outer_halo.r200, outer_halo.r200
-        )
+        Phi_b_sph = tools.compute_Phi_b_spherical(outer_halo.M_b, 1e-6 * outer_halo.r200, outer_halo.r200)
 
         # Spherical Jeans model (with spherically averaged potential)
         # Matched onto spherical outer halo
-        inner_halo, success = sphmodel.relaxation(
-            r1, outer_halo, Phi_b=Phi_b_sph, **kwargs
-        )
+        inner_halo, success = sphmodel.relaxation(r1, outer_halo, Phi_b=Phi_b_sph, **kwargs)
 
         # Matching was successful
         if success:
@@ -58,15 +52,11 @@ def squashed(r1, *outer_halo_params, q0=1, Phi_b=None, q_mode="smooth", **kwargs
         outer_halo = CDM_profile(*outer_halo_params, q0=1, Phi_b=Phi_b, **kwargs)
 
         # Compute spherically averaged potential from enclosed mass profile (computed within outer_halo)
-        Phi_b_sph = tools.compute_Phi_b_spherical(
-            outer_halo.M_b, 1e-6 * outer_halo.r200, outer_halo.r200
-        )
+        Phi_b_sph = tools.compute_Phi_b_spherical(outer_halo.M_b, 1e-6 * outer_halo.r200, outer_halo.r200)
 
         # Spherical Jeans model (with spherically averaged potential)
         # Matched onto spherical outer halo
-        inner_halo, success = sphmodel.relaxation(
-            r1, outer_halo, Phi_b=Phi_b_sph, **kwargs
-        )
+        inner_halo, success = sphmodel.relaxation(r1, outer_halo, Phi_b=Phi_b_sph, **kwargs)
 
         # Matching was successful
         if success:
@@ -87,9 +77,7 @@ def squashed(r1, *outer_halo_params, q0=1, Phi_b=None, q_mode="smooth", **kwargs
                 return halo
 
             else:
-                raise Exception(
-                    "Unknown q_mode=%s. Must be 'uniform' or 'smooth' only."
-                )
+                raise Exception("Unknown q_mode=%s. Must be 'uniform' or 'smooth' only.")
 
         # Unsuccessful matching
         else:
@@ -110,9 +98,7 @@ def isothermal(r1, *outer_halo_params, q0=1, Phi_b=None, **kwargs):
         outer_halo = CDM_profile(*outer_halo_params, q0=q0, Phi_b=Phi_b, **kwargs)
 
         # Nonspherical Jeans model matched onto nonspherical outer halo
-        inner_halo, success = nonspherical.relaxation(
-            r1, outer_halo, Phi_b=outer_halo.Phi_b, **kwargs
-        )
+        inner_halo, success = nonspherical.relaxation(r1, outer_halo, Phi_b=outer_halo.Phi_b, **kwargs)
 
         # Matching was successful
         if success:
@@ -131,9 +117,3 @@ def cdm(*outer_halo_params, q0=1, Phi_b=None, **kwargs):
 
     # Return profile object squashed by q0
     return profile(outer=outer_halo, q=q0)
-
-
-# Load a pickled profile object
-def load(filename):
-    with open(filename, "rb") as f:
-        return dill.load(f)

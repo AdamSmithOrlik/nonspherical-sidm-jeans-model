@@ -26,44 +26,44 @@ import numpy as np
 ###################### DICTIONARY CONFIGURATION ######################
 # EXAMPLE RUN DICTIONARY. EDIT THIS TO SET PARAMETERS AND OPTIONS.
 
-run_dictionary = {
-    "model": "spherical",  # Options: 'spherical', 'cdm', 'squashed' or 'isothermal'. Setting to cdm will override r1 st r1=0. Setting to spherical will override q0 so that q0=1.
-    "r1": 10,  # kpc. Matching radius for SIDM and CDM halos. If r1=0 CDM halo is returned.
-    "M200": 1e12,  # Msun
-    "c": 10.0,  # Dimensionless. Concentration parameter. c = r200/rs.
-    "q0": 1.0,  # Dimensionless. Initial outer halo shape. If q0=1, spherical halo is assumed.
-    "alpha": None,  # Dimensionless. Halo flattening parameter for Einasto profile. If None, NFW profile is used.
-    "Phi_b": None,  # (km/s)^2. Baryon potential. Must be a function with signature Phi_b(r, theta), even if spherical.
-    "AC_prescription": None,  # Adiabatic contraction prescription. Options: 'Cautun' or 'Gnedin'.
-    "Gnedin_params": (1.6, 0.8,),  # Only used if AC_prescription='Gnedin'. (A, w) parameters.
-    "save_profile": True,  # If True, saves the profile to a .npz file.
-    "save_dir": "data/",  # Relative path to save the profile .npz file.
-    "verbose": False,  # If True, prints progress and warnings.
-    "L_list": [0],  # Angular momentum modes to include in the isothermal model.
-    "M_list": [0],  # M > 0 not yet implemented.
-    "q_mode": "smooth",  # Only used if model='squashed'. Options: 'uniform' or 'smooth'.
-}
+# run_dictionary = {
+#     "model": "spherical",  # Options: 'spherical', 'cdm', 'squashed' or 'isothermal'. Setting to cdm will override r1 st r1=0. Setting to spherical will override q0 so that q0=1.
+#     "r1": 10,  # kpc. Matching radius for SIDM and CDM halos. If r1=0 CDM halo is returned.
+#     "M200": 1e12,  # Msun
+#     "c": 10.0,  # Dimensionless. Concentration parameter. c = r200/rs.
+#     "q0": 1.0,  # Dimensionless. Initial outer halo shape. If q0=1, spherical halo is assumed.
+#     "alpha": None,  # Dimensionless. Halo flattening parameter for Einasto profile. If None, NFW profile is used.
+#     "Phi_b": None,  # (km/s)^2. Baryon potential. Must be a function with signature Phi_b(r, theta), even if spherical.
+#     "AC_prescription": None,  # Adiabatic contraction prescription. Options: 'Cautun' or 'Gnedin'.
+#     "Gnedin_params": (1.6, 0.8,),  # Only used if AC_prescription='Gnedin'. (A, w) parameters.
+#     "save_profile": True,  # If True, saves the profile to a .npz file.
+#     "save_dir": "data/",  # Relative path to save the profile .npz file.
+#     "verbose": False,  # If True, prints progress and warnings.
+#     "L_list": [0],  # Angular momentum modes to include in the isothermal model.
+#     "M_list": [0],  # M > 0 not yet implemented.
+#     "q_mode": "smooth",  # Only used if model='squashed'. Options: 'uniform' or 'smooth'.
+# }
 
 # EXAMPLE SCAN DICTIONARY. ONE OR MULTIPLE PARAMETERS CAN BE SET TO A LIST OR ARRAY TO SCAN OVER.
 # SCANABLE PARAMETERS: r1, M200, c, q0, alpha
 
-# run_dictionary = {
-#     "model": "spherical", 
-#     "r1": [10,20,30], 
-#     "M200": 1e12, 
-#     "c": 10.0,  
-#     "q0": 1.0, 
-#     "alpha": None, 
-#     "Phi_b": None, 
-#     "AC_prescription": None,  
-#     "Gnedin_params": (1.6, 0.8,), 
-#     "save_profile": True, 
-#     "save_dir": "data/",  
-#     "verbose": False,  
-#     "L_list": [0],  
-#     "M_list": [0],  
-#     "q_mode": "smooth"
-# }
+run_dictionary = {
+    "model": "spherical", 
+    "r1": [10,20,30], 
+    "M200": 1e12, 
+    "c": 10.0,  
+    "q0": 1.0, 
+    "alpha": None, 
+    "Phi_b": None, 
+    "AC_prescription": None,
+    "Gnedin_params": (1.6, 0.8,), 
+    "save_profile": True, 
+    "save_dir": "data/",  
+    "verbose": False,  
+    "L_list": [0],  
+    "M_list": [0],  
+    "q_mode": "smooth"
+}
 
 ###################### FUNCTION CONFIGURATION ######################
 # Baryon potential function
