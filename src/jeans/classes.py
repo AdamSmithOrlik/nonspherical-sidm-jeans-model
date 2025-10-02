@@ -83,9 +83,7 @@ class profile:
 
         # Set flag if profile is spherically symmetric
         if inner:
-            self.sph_sym_flag = (
-                inner.sph_sym_flag and outer.sph_sym_flag and not self.squash_flag
-            )
+            self.sph_sym_flag = inner.sph_sym_flag and outer.sph_sym_flag and not self.squash_flag
         else:
             self.sph_sym_flag = outer.sph_sym_flag and not self.squash_flag
 
@@ -103,10 +101,7 @@ class profile:
             rsph_old = r
             for i in range(max_iter):
 
-                rsph_new = np.sqrt(
-                    R**2 * self.q(rsph_old) ** (2 / 3)
-                    + z**2 * self.q(rsph_old) ** (-4 / 3)
-                )
+                rsph_new = np.sqrt(R**2 * self.q(rsph_old) ** (2 / 3) + z**2 * self.q(rsph_old) ** (-4 / 3))
 
                 if np.allclose(rsph_new, rsph_old, **kwargs):
                     break
@@ -114,10 +109,7 @@ class profile:
                 rsph_old = rsph_new
 
             else:
-                raise Exception(
-                    "rsph did not converge within tolerance with max_iter=%d iterations"
-                    % max_iter
-                )
+                raise Exception("rsph did not converge within tolerance with max_iter=%d iterations" % max_iter)
 
             return rsph_new
 
@@ -137,9 +129,7 @@ class profile:
             # Take spherical average of squashed profile
             if self.squash_flag:
 
-                integrand = lambda th: rho(self.r_sph(r, th, interp=interp)) * np.sin(
-                    th
-                )
+                integrand = lambda th: rho(self.r_sph(r, th, interp=interp)) * np.sin(th)
                 # return 0.5 * integrate(integrand,0,np.pi)
 
                 # If symmetric about xy plane, only integrate half of integration range and multiply by 2
@@ -154,17 +144,13 @@ class profile:
 
         # Else r is a list or array
         else:
-            return np.array(
-                [self.rho_sph_avg(ri, interp=interp, zsym=zsym) for ri in r]
-            )
+            return np.array([self.rho_sph_avg(ri, interp=interp, zsym=zsym) for ri in r])
 
     # Helper function for calculating squashed Jeans profile
     def rho_spherical(self, r):
 
         if np.ndim(r) == 0:
-            return (
-                self.inner.rho_sph_avg(r) if r < self.r1 else self.outer.rho_sph_avg(r)
-            )
+            return self.inner.rho_sph_avg(r) if r < self.r1 else self.outer.rho_sph_avg(r)
 
         else:
             return np.array([self.rho_spherical(ri) for ri in r])
@@ -204,15 +190,10 @@ class profile:
         else:
             # Check have same lengths
             if len(r) != len(th):
-                raise Exception(
-                    "Not sure how to interpret r with len=%d and theta with len=%d"
-                    % (len(r), len(th))
-                )
+                raise Exception("Not sure how to interpret r with len=%d and theta with len=%d" % (len(r), len(th)))
 
             else:
-                return np.array(
-                    [self.rho_sph(ri, th_i, interp=interp) for ri, th_i in zip(r, th)]
-                )
+                return np.array([self.rho_sph(ri, th_i, interp=interp) for ri, th_i in zip(r, th)])
 
         # End of rho_sph (DM density)
 
@@ -234,9 +215,7 @@ class profile:
         # array of theta values
         th_array = np.arctan2.outer(R_array, z_array).flatten()
 
-        return np.array(
-            [self.rho_sph(r, th) for r, th in zip(r_array, th_array)]
-        ).reshape((len_R, len_z))
+        return np.array([self.rho_sph(r, th) for r, th in zip(r_array, th_array)]).reshape((len_R, len_z))
 
     # Angular integral rho_LM(r) = int dOmega Z(L,M,th,phi) rho(r,th,phi)
     # Only M = 0 case supported
@@ -255,13 +234,7 @@ class profile:
 
             # Compute integral
             else:
-                integrand = (
-                    lambda th: 2
-                    * np.pi
-                    * np.sin(th)
-                    * self.rho_sph(r, th)
-                    * Z(L, M, th, 0)
-                )
+                integrand = lambda th: 2 * np.pi * np.sin(th) * self.rho_sph(r, th) * Z(L, M, th, 0)
                 return integrate(integrand, 0, np.pi)
 
         # If r is an array, loop over those values recursively
@@ -355,14 +328,10 @@ class profile:
                 inner_sign_interp = InterpolatedUnivariateSpline(x, sign, k=1)
 
                 # Full interpolation function for range [rmin,r1]
-                inner = lambda r: np.exp(inner_interp(np.log(r))) * inner_sign_interp(
-                    np.log(r)
-                )
+                inner = lambda r: np.exp(inner_interp(np.log(r))) * inner_sign_interp(np.log(r))
 
             # Inner power law below rmin
-            inner_slope = np.log(rho_LM_list[1] / rho_LM_list[0]) / np.log(
-                r_list[1] / r_list[0]
-            )
+            inner_slope = np.log(rho_LM_list[1] / rho_LM_list[0]) / np.log(r_list[1] / r_list[0])
             inner_extrap = lambda r: rho_LM_list[0] * (r / rmin) ** inner_slope
 
             # Outer halo interp
@@ -391,14 +360,10 @@ class profile:
                 outer_sign_interp = InterpolatedUnivariateSpline(x, sign, k=1)
 
                 # Full interpolation function for range [r1,rmax]
-                outer = lambda r: np.exp(outer_interp(np.log(r))) * outer_sign_interp(
-                    np.log(r)
-                )
+                outer = lambda r: np.exp(outer_interp(np.log(r))) * outer_sign_interp(np.log(r))
 
                 # Outer power law beyond rmax
-                outer_slope = np.log(rho_LM_list[-1] / rho_LM_list[-2]) / np.log(
-                    r_list[-1] / r_list[-2]
-                )
+                outer_slope = np.log(rho_LM_list[-1] / rho_LM_list[-2]) / np.log(r_list[-1] / r_list[-2])
                 outer_extrap = lambda r: rho_LM_list[-1] * (r / rmax) ** outer_slope
 
             def output_func(r):
@@ -466,9 +431,7 @@ class profile:
                 integrand_list = np.array([integrand(ri) for ri in r_list])
 
                 integrand_interp = InterpolatedUnivariateSpline(r_list, integrand_list)
-                M_out = np.array(
-                    [integrand_interp.integral(rmin, ri) + Mmin for ri in r_encl]
-                )
+                M_out = np.array([integrand_interp.integral(rmin, ri) + Mmin for ri in r_encl])
 
                 return M_out
 
@@ -535,9 +498,7 @@ class profile:
             return self.Phi_LM(r, 0) * Z(0, 0, 0, 0)
 
         else:
-            return np.sum(
-                [self.Phi_LM(r, L) * Z(L, 0, theta, 0) for L in range(Lmax + 1)], axis=0
-            )
+            return np.sum([self.Phi_LM(r, L) * Z(L, 0, theta, 0) for L in range(Lmax + 1)], axis=0)
 
     def Phi_LM(self, r, L, M=0, **kwargs):
         rho_LM = self.rho_LM_interp(L, 0, **kwargs)
@@ -564,9 +525,7 @@ class profile:
 
             # Calculate LM mode contribution
             Phi_old = np.array(Phi_tot)
-            Phi_tot += np.multiply.outer(
-                potential.Phi_LM(rho_LM, r, L), Z(L, 0, theta, 0)
-            )
+            Phi_tot += np.multiply.outer(potential.Phi_LM(rho_LM, r, L), Z(L, 0, theta, 0))
 
             if np.allclose(Phi_tot, Phi_old, rtol=1e-3, atol=1e-3):
                 break
@@ -583,9 +542,7 @@ class profile:
 
         def find_q(r):
             # f = log(rho(R,0) / rho(0,z))
-            f = lambda q: np.log(
-                rho(r * q ** (-1 / 3.0), 0) / rho(0, r * q ** (2 / 3.0))
-            )
+            f = lambda q: np.log(rho(r * q ** (-1 / 3.0), 0) / rho(0, r * q ** (2 / 3.0)))
             try:
                 return brentq(f, qmin, qmax)
             except:
@@ -628,21 +585,10 @@ class profile:
 
                 while num_iter < maxiter:
 
-                    integrand = (
-                        lambda th: 2
-                        * np.sin(th)
-                        * np.cos(th) ** 2
-                        * rho(r(th, q_old), th)
-                        * r(th, q_old) ** 5
-                    )
+                    integrand = lambda th: 2 * np.sin(th) * np.cos(th) ** 2 * rho(r(th, q_old), th) * r(th, q_old) ** 5
                     I_zz = integrate(integrand, 0, np.pi)
 
-                    integrand = (
-                        lambda th: np.sin(th)
-                        * np.sin(th) ** 2
-                        * rho(r(th, q_old), th)
-                        * r(th, q_old) ** 5
-                    )
+                    integrand = lambda th: np.sin(th) * np.sin(th) ** 2 * rho(r(th, q_old), th) * r(th, q_old) ** 5
                     I_RR = integrate(integrand, 0, np.pi)
 
                     q_new = np.sqrt(I_zz / I_RR)
@@ -653,9 +599,7 @@ class profile:
                         q_old = q_new
                         num_iter += 1
                 else:
-                    print(
-                        "'iterate' method did not converge in %d iterations." % maxiter
-                    )
+                    print("'iterate' method did not converge in %d iterations." % maxiter)
 
                 return q_new
 
@@ -663,21 +607,10 @@ class profile:
 
                 def f(q):
 
-                    integrand = (
-                        lambda th: 2
-                        * np.sin(th)
-                        * np.cos(th) ** 2
-                        * rho(r(th, q), th)
-                        * r(th, q) ** 5
-                    )
+                    integrand = lambda th: 2 * np.sin(th) * np.cos(th) ** 2 * rho(r(th, q), th) * r(th, q) ** 5
                     I_zz = integrate(integrand, 0, np.pi)
 
-                    integrand = (
-                        lambda th: np.sin(th)
-                        * np.sin(th) ** 2
-                        * rho(r(th, q), th)
-                        * r(th, q) ** 5
-                    )
+                    integrand = lambda th: np.sin(th) * np.sin(th) ** 2 * rho(r(th, q), th) * r(th, q) ** 5
                     I_RR = integrate(integrand, 0, np.pi)
 
                     return q**2 - I_zz / I_RR
@@ -754,23 +687,11 @@ class profile:
 
                     r_max = lambda th: r_spheroid(th, q_old)
 
-                    integrand = (
-                        lambda r, th: 2
-                        * np.sin(th)
-                        * np.cos(th) ** 2
-                        * rho(r, th)
-                        * r**4
-                    )
-                    I_zz = dblquad(
-                        integrand, 0, np.pi, r_min, r_max, epsabs=epsabs, epsrel=epsrel
-                    )[0]
+                    integrand = lambda r, th: 2 * np.sin(th) * np.cos(th) ** 2 * rho(r, th) * r**4
+                    I_zz = dblquad(integrand, 0, np.pi, r_min, r_max, epsabs=epsabs, epsrel=epsrel)[0]
 
-                    integrand = (
-                        lambda r, th: np.sin(th) * np.sin(th) ** 2 * rho(r, th) * r**4
-                    )
-                    I_RR = dblquad(
-                        integrand, 0, np.pi, r_min, r_max, epsabs=epsabs, epsrel=epsrel
-                    )[0]
+                    integrand = lambda r, th: np.sin(th) * np.sin(th) ** 2 * rho(r, th) * r**4
+                    I_RR = dblquad(integrand, 0, np.pi, r_min, r_max, epsabs=epsabs, epsrel=epsrel)[0]
 
                     q_new = np.sqrt(I_zz / I_RR)
 
@@ -780,9 +701,7 @@ class profile:
                         q_old = q_new
                         num_iter += 1
                 else:
-                    print(
-                        "'iterate' method did not converge in %d iterations." % maxiter
-                    )
+                    print("'iterate' method did not converge in %d iterations." % maxiter)
 
                 return q_new
 
@@ -792,23 +711,11 @@ class profile:
 
                     r_max = lambda th: r_spheroid(th, q)
 
-                    integrand = (
-                        lambda r, th: 2
-                        * np.sin(th)
-                        * np.cos(th) ** 2
-                        * rho(r, th)
-                        * r**4
-                    )
-                    I_zz = dblquad(
-                        integrand, 0, np.pi, r_min, r_max, epsabs=epsabs, epsrel=epsrel
-                    )[0]
+                    integrand = lambda r, th: 2 * np.sin(th) * np.cos(th) ** 2 * rho(r, th) * r**4
+                    I_zz = dblquad(integrand, 0, np.pi, r_min, r_max, epsabs=epsabs, epsrel=epsrel)[0]
 
-                    integrand = (
-                        lambda r, th: np.sin(th) * np.sin(th) ** 2 * rho(r, th) * r**4
-                    )
-                    I_RR = dblquad(
-                        integrand, 0, np.pi, r_min, r_max, epsabs=epsabs, epsrel=epsrel
-                    )[0]
+                    integrand = lambda r, th: np.sin(th) * np.sin(th) ** 2 * rho(r, th) * r**4
+                    I_RR = dblquad(integrand, 0, np.pi, r_min, r_max, epsabs=epsabs, epsrel=epsrel)[0]
 
                     return q**2 - I_zz / I_RR
 
@@ -887,9 +794,7 @@ class isothermal_profile:
 
         if Phi_b:
             self.Phi_b = Phi_b
-            self._Phi_b_user = (
-                Phi_b  # Store original user-supplied function for serialization
-            )
+            self._Phi_b_user = Phi_b  # Store original user-supplied function for serialization
         else:
             self.Phi_b = no_baryons
             self._Phi_b_user = None
@@ -903,12 +808,8 @@ class isothermal_profile:
         # Relaxation code will use these automatically if they are defined
         self.angular_moments_set = False
         self.angular_moments_list = np.zeros((self.num_r_points + 1, len(L_list)))
-        r_points = np.concatenate(
-            ([r_list[0]], 0.5 * (r_list[:-1] + r_list[1:]), [r_list[-1]])
-        )
-        self.angular_moments_interp = interp1d(
-            r_points, self.angular_moments_list, axis=0
-        )
+        r_points = np.concatenate(([r_list[0]], 0.5 * (r_list[:-1] + r_list[1:]), [r_list[-1]]))
+        self.angular_moments_interp = interp1d(r_points, self.angular_moments_list, axis=0)
 
         # Flag for spherical symmetry if Phi_b only depends on r and only L=0 mode
         self.sph_sym_flag = (self.num_Phi_b_variables == 1) & (self.L_list == [0])
@@ -922,17 +823,13 @@ class isothermal_profile:
     def get_moment(self, moment_type, L, M, *r, k=3):
 
         # Find index for desired L,M value
-        LM_index = np.where(
-            (np.array(self.L_list) == L) & (np.array(self.M_list) == M)
-        )[0]
+        LM_index = np.where((np.array(self.L_list) == L) & (np.array(self.M_list) == M))[0]
 
         # Should find exactly one match for L,M values
         if len(LM_index) == 1:
             i = LM_index[0]
         else:
-            raise Exception(
-                "Error: %d matches found for L=%d and M=%d" % (len(LM_index), L, M)
-            )
+            raise Exception("Error: %d matches found for L=%d and M=%d" % (len(LM_index), L, M))
 
         if moment_type == "phi":
             moment = self.y[i :: self.num_func]
@@ -950,17 +847,13 @@ class isothermal_profile:
 
             # Check within grid
             if np.amax(r) > self.r1:
-                raise Exception(
-                    "All r values must be < r1. max(r)=%f outside r1." % np.amax(r)
-                )
+                raise Exception("All r values must be < r1. max(r)=%f outside r1." % np.amax(r))
 
             # Get inner slope
             if moment[1] == moment[2]:
                 alpha = 0
             else:
-                alpha = np.log(moment[2] / moment[1]) / np.log(
-                    self.r_list[2] / self.r_list[1]
-                )
+                alpha = np.log(moment[2] / moment[1]) / np.log(self.r_list[2] / self.r_list[1])
             inner = lambda r: moment[1] * (r / self.r_list[1]) ** alpha
 
             # Make interpolation function
@@ -1059,39 +952,24 @@ class isothermal_profile:
         else:
 
             # Construct array of phi_LM values
-            phi_LM_arr = np.array(
-                [self.phi(L_, M_, r_list) for L_, M_ in zip(self.L_list, self.M_list)]
-            )
+            phi_LM_arr = np.array([self.phi(L_, M_, r_list) for L_, M_ in zip(self.L_list, self.M_list)])
 
             # Construct phi_b
             if self.num_Phi_b_variables == 1:
                 phi_b = lambda r, th: (self.Phi_b(r) - self.Phi_b(0)) / self.sigma0**2
             elif self.num_Phi_b_variables == 2:
-                phi_b = (
-                    lambda r, th: (self.Phi_b(r, th) - self.Phi_b(0, 0))
-                    / self.sigma0**2
-                )
+                phi_b = lambda r, th: (self.Phi_b(r, th) - self.Phi_b(0, 0)) / self.sigma0**2
             else:
-                raise Exception(
-                    "Too many variables %d > 2 for Phi_b." % self.num_Phi_b_variables
-                )
+                raise Exception("Too many variables %d > 2 for Phi_b." % self.num_Phi_b_variables)
 
             # Case with one r value
             if np.ndim(r_list) == 0:
 
                 def phi_dm(th):
-                    Z_list = [
-                        Z(L_, M_, th, 0) for L_, M_ in zip(self.L_list, self.M_list)
-                    ]
+                    Z_list = [Z(L_, M_, th, 0) for L_, M_ in zip(self.L_list, self.M_list)]
                     return np.dot(phi_LM_arr, Z_list)
 
-                integrand = (
-                    lambda th: 2
-                    * np.pi
-                    * np.exp(-phi_dm(th) - phi_b(r_list, th))
-                    * np.sin(th)
-                    * Z(L, M, th, 0)
-                )
+                integrand = lambda th: 2 * np.pi * np.exp(-phi_dm(th) - phi_b(r_list, th)) * np.sin(th) * Z(L, M, th, 0)
                 return self.rho0 * integrate(integrand, 0, np.pi)
 
             # Case with many r values
@@ -1101,18 +979,10 @@ class isothermal_profile:
                 for i, ri in enumerate(r_list):
 
                     def phi_dm(th):
-                        Z_list = [
-                            Z(L_, M_, th, 0) for L_, M_ in zip(self.L_list, self.M_list)
-                        ]
+                        Z_list = [Z(L_, M_, th, 0) for L_, M_ in zip(self.L_list, self.M_list)]
                         return np.dot(phi_LM_arr[:, i], Z_list)
 
-                    integrand = (
-                        lambda th: 2
-                        * np.pi
-                        * np.exp(-phi_dm(th) - phi_b(ri, th))
-                        * np.sin(th)
-                        * Z(L, M, th, 0)
-                    )
+                    integrand = lambda th: 2 * np.pi * np.exp(-phi_dm(th) - phi_b(ri, th)) * np.sin(th) * Z(L, M, th, 0)
                     rho[i] = self.rho0 * integrate(integrand, 0, np.pi)
 
                 return rho
@@ -1137,22 +1007,15 @@ class isothermal_profile:
         else:
 
             # Construct array of phi_LM values
-            phi_LM_arr = np.array(
-                [self.phi(L, M, r_list) for L, M in zip(self.L_list, self.M_list)]
-            )
+            phi_LM_arr = np.array([self.phi(L, M, r_list) for L, M in zip(self.L_list, self.M_list)])
 
             # Construct phi_b
             if self.num_Phi_b_variables == 1:
                 phi_b = lambda r, th: (self.Phi_b(r) - self.Phi_b(0)) / self.sigma0**2
             elif self.num_Phi_b_variables == 2:
-                phi_b = (
-                    lambda r, th: (self.Phi_b(r, th) - self.Phi_b(0, 0))
-                    / self.sigma0**2
-                )
+                phi_b = lambda r, th: (self.Phi_b(r, th) - self.Phi_b(0, 0)) / self.sigma0**2
             else:
-                raise Exception(
-                    "Too many variables %d > 2 for Phi_b." % self.num_Phi_b_variables
-                )
+                raise Exception("Too many variables %d > 2 for Phi_b." % self.num_Phi_b_variables)
 
             # Case with one r value
             if np.ndim(r_list) == 0:
@@ -1161,11 +1024,7 @@ class isothermal_profile:
                     Z_list = [Z(L, M, th, 0) for L, M in zip(self.L_list, self.M_list)]
                     return np.dot(phi_LM_arr, Z_list)
 
-                integrand = (
-                    lambda th: 0.5
-                    * np.exp(-phi_dm(th) - phi_b(r_list, th))
-                    * np.sin(th)
-                )
+                integrand = lambda th: 0.5 * np.exp(-phi_dm(th) - phi_b(r_list, th)) * np.sin(th)
                 return self.rho0 * integrate(integrand, 0, np.pi)
 
             # Case with many r values
@@ -1175,16 +1034,10 @@ class isothermal_profile:
                 for i, ri in enumerate(r_list):
 
                     def phi_dm(th):
-                        Z_list = [
-                            Z(L, M, th, 0) for L, M in zip(self.L_list, self.M_list)
-                        ]
+                        Z_list = [Z(L, M, th, 0) for L, M in zip(self.L_list, self.M_list)]
                         return np.dot(phi_LM_arr[:, i], Z_list)
 
-                    integrand = (
-                        lambda th: 0.5
-                        * np.exp(-phi_dm(th) - phi_b(ri, th))
-                        * np.sin(th)
-                    )
+                    integrand = lambda th: 0.5 * np.exp(-phi_dm(th) - phi_b(ri, th)) * np.sin(th)
                     rho[i] = self.rho0 * integrate(integrand, 0, np.pi)
 
                 return rho
@@ -1208,14 +1061,9 @@ class isothermal_profile:
                     phi_b = (self.Phi_b(r, th) - self.Phi_b(0, 0)) / self.sigma0**2
 
                 else:
-                    raise Exception(
-                        "Too many variables %d > 2 for Phi_b."
-                        % self.num_Phi_b_variables
-                    )
+                    raise Exception("Too many variables %d > 2 for Phi_b." % self.num_Phi_b_variables)
 
-                phi_LM_list = [
-                    self.phi(L, M, r) for L, M in zip(self.L_list, self.M_list)
-                ]
+                phi_LM_list = [self.phi(L, M, r) for L, M in zip(self.L_list, self.M_list)]
                 Z_list = [Z(L, M, th, 0) for L, M in zip(self.L_list, self.M_list)]
                 phi_dm = np.dot(phi_LM_list, Z_list)
 
@@ -1237,10 +1085,7 @@ class isothermal_profile:
         else:
             # Check have same lengths
             if len(r) != len(th):
-                raise Exception(
-                    "Not sure how to interpret r with len=%d and theta with len=%d"
-                    % (len(r), len(th))
-                )
+                raise Exception("Not sure how to interpret r with len=%d and theta with len=%d" % (len(r), len(th)))
 
             else:
                 return np.array([self.rho_sph(ri, th_i) for ri, th_i in zip(r, th)])
@@ -1278,22 +1123,15 @@ class isothermal_profile:
 
         # Want to evaluate these quantities at intermediate positions between grid points or at boundaries
         r_list = self.r_list
-        r_points = np.concatenate(
-            ([r_list[0]], 0.5 * (r_list[:-1] + r_list[1:]), [r_list[-1]])
-        )
+        r_points = np.concatenate(([r_list[0]], 0.5 * (r_list[:-1] + r_list[1:]), [r_list[-1]]))
 
         L_list = self.L_list
         num_size = len(L_list)
 
         phi_list = np.array(
-            [
-                self.y[i * self.num_func : i * self.num_func + num_size]
-                for i in range(self.num_r_points)
-            ]
+            [self.y[i * self.num_func : i * self.num_func + num_size] for i in range(self.num_r_points)]
         )
-        phi_at_r_points = np.concatenate(
-            ([phi_list[0]], 0.5 * (phi_list[:-1] + phi_list[1:]), [phi_list[-1]])
-        )
+        phi_at_r_points = np.concatenate(([phi_list[0]], 0.5 * (phi_list[:-1] + phi_list[1:]), [phi_list[-1]]))
 
         for i in range(len(r_points)):
 
@@ -1304,63 +1142,32 @@ class isothermal_profile:
                 phi_b = (self.Phi_b(r) - self.Phi_b(0)) / self.sigma0**2
                 phi_dm = Z(0, 0, 0, 0) * phi_at_r_points[i, 0]
 
-                self.angular_moments_list[i, 0] = Z(0, 0, 0, 0) * np.exp(
-                    -phi_b - phi_dm
-                )
+                self.angular_moments_list[i, 0] = Z(0, 0, 0, 0) * np.exp(-phi_b - phi_dm)
 
             elif (self.num_Phi_b_variables == 1) & (L_list != [0]):
 
                 phi_b = (self.Phi_b(r) - self.Phi_b(0)) / self.sigma0**2
-                phi_dm = lambda th: np.sum(
-                    [
-                        Z(L_list[_j], 0, th, 0) * phi_at_r_points[i, _j]
-                        for _j in range(num_size)
-                    ]
-                )
+                phi_dm = lambda th: np.sum([Z(L_list[_j], 0, th, 0) * phi_at_r_points[i, _j] for _j in range(num_size)])
 
                 for j in range(num_size):
 
-                    integrand = (
-                        lambda th: Z(L_list[j], 0, th, 0)
-                        * np.exp(-phi_b - phi_dm(th))
-                        * np.sin(th)
-                    )
-                    self.angular_moments_list[i, j] = 0.5 * integrate(
-                        integrand, 0, np.pi
-                    )
+                    integrand = lambda th: Z(L_list[j], 0, th, 0) * np.exp(-phi_b - phi_dm(th)) * np.sin(th)
+                    self.angular_moments_list[i, j] = 0.5 * integrate(integrand, 0, np.pi)
 
             elif self.num_Phi_b_variables == 2:
 
-                phi_b = (
-                    lambda th: (self.Phi_b(r, th) - self.Phi_b(0, th)) / self.sigma0**2
-                )
-                phi_dm = lambda th: np.sum(
-                    [
-                        Z(L_list[_j], 0, th, 0) * phi_at_r_points[i, _j]
-                        for _j in range(num_size)
-                    ]
-                )
+                phi_b = lambda th: (self.Phi_b(r, th) - self.Phi_b(0, th)) / self.sigma0**2
+                phi_dm = lambda th: np.sum([Z(L_list[_j], 0, th, 0) * phi_at_r_points[i, _j] for _j in range(num_size)])
 
                 for j in range(num_size):
 
-                    integrand = (
-                        lambda th: Z(L_list[j], 0, th, 0)
-                        * np.exp(-phi_b(th) - phi_dm(th))
-                        * np.sin(th)
-                    )
-                    self.angular_moments_list[i, j] = 0.5 * integrate(
-                        integrand, 0, np.pi
-                    )
+                    integrand = lambda th: Z(L_list[j], 0, th, 0) * np.exp(-phi_b(th) - phi_dm(th)) * np.sin(th)
+                    self.angular_moments_list[i, j] = 0.5 * integrate(integrand, 0, np.pi)
 
             else:
-                raise Exception(
-                    "Case with %d not supported for angular_moments."
-                    % self.num_Phi_b_variables
-                )
+                raise Exception("Case with %d not supported for angular_moments." % self.num_Phi_b_variables)
 
-        self.angular_moments_interp = interp1d(
-            r_points, self.angular_moments_list, axis=0
-        )
+        self.angular_moments_interp = interp1d(r_points, self.angular_moments_list, axis=0)
 
     # end of update_angular_moments()
 
@@ -1393,9 +1200,7 @@ class isothermal_profile:
                     new_y[i :: self.num_func] = [phi_int(r) for r in new_r_list]
 
                     mu_int = interp1d(old_r_list, self.mu(L, M), kind="linear")
-                    new_y[i + len(self.L_list) :: self.num_func] = [
-                        mu_int(r) for r in new_r_list
-                    ]
+                    new_y[i + len(self.L_list) :: self.num_func] = [mu_int(r) for r in new_r_list]
 
                 self.y = new_y
                 self.r_list = new_r_list
@@ -1437,9 +1242,7 @@ class isothermal_profile:
                         i = new_L_list.index(L)
                         M = new_M_list[i]
                         new_y[i :: 2 * len(new_L_list)] = self.phi(L, M)
-                        new_y[i + len(new_L_list) :: 2 * len(new_L_list)] = self.mu(
-                            L, M
-                        )
+                        new_y[i + len(new_L_list) :: 2 * len(new_L_list)] = self.mu(L, M)
 
                 self.y = new_y
                 self.L_list = new_L_list
@@ -1517,9 +1320,7 @@ class CDM_profile:
 
         # Check inputs are correct
         if len(inputs) != 2:
-            raise Exception(
-                "inputs must be 'M200,c' (defaults) or 'rhos,rs' (with input_NFW=True)."
-            )
+            raise Exception("inputs must be 'M200,c' (defaults) or 'rhos,rs' (with input_NFW=True).")
 
         if alpha:
             self.halo_type = "Einasto"
@@ -1533,15 +1334,11 @@ class CDM_profile:
         # Assume input M200, c
         elif (not input_NFW) and (not alpha):
             self.M200, self.c = inputs
-            self.rhos, self.rs, self.r200 = mass_concentration_to_NFW_parameters(
-                *inputs
-            )
+            self.rhos, self.rs, self.r200 = mass_concentration_to_NFW_parameters(*inputs)
         # Assume input M200, c, alpha
         elif (not input_NFW) and (alpha):
             self.M200, self.c, self.alpha = inputs + (alpha,)  # inputs is a tuple
-            self.rhos, self.rs, self.r200 = mass_concentration_to_NFW_parameters(
-                *inputs
-            )
+            self.rhos, self.rs, self.r200 = mass_concentration_to_NFW_parameters(*inputs)
         else:
             raise Exception("inputs inconsistent with NFW or Einasto profiles.")
 
@@ -1561,9 +1358,7 @@ class CDM_profile:
         # Baryon potential
         if Phi_b:
             self.Phi_b = Phi_b
-            self._Phi_b_user = (
-                Phi_b  # Store original user-supplied function for serialization
-            )
+            self._Phi_b_user = Phi_b  # Store original user-supplied function for serialization
         else:
             self.Phi_b = no_baryons
             self._Phi_b_user = None
@@ -1638,9 +1433,7 @@ class CDM_profile:
     # Define spheroidal density function in cylindrical coordinates by substituting r -> r_sph
     def rho_cyl(self, R, z):
         # spheroidal r
-        r_sph = np.sqrt(
-            (R * self.q0 ** (1 / 3.0)) ** 2 + (z * self.q0 ** (-2 / 3.0)) ** 2
-        )
+        r_sph = np.sqrt((R * self.q0 ** (1 / 3.0)) ** 2 + (z * self.q0 ** (-2 / 3.0)) ** 2)
         return self.rho_sph_sym(r_sph)
 
     # Density in spherical coordinates
@@ -1670,10 +1463,7 @@ class CDM_profile:
         else:
             # Check have same lengths
             if len(r) != len(th):
-                raise Exception(
-                    "Not sure how to interpret r with len=%d and theta with len=%d"
-                    % (len(r), len(th))
-                )
+                raise Exception("Not sure how to interpret r with len=%d and theta with len=%d" % (len(r), len(th)))
 
             else:
                 return np.array([self.rho_sph(ri, th_i) for ri, th_i in zip(r, th)])
@@ -1688,11 +1478,7 @@ class CDM_profile:
 
         # Case where r is single number
         elif np.ndim(r) == 0:
-            integrand = (
-                lambda th: 0.5
-                * self.rho_cyl(r * np.sin(th), r * np.cos(th))
-                * np.sin(th)
-            )
+            integrand = lambda th: 0.5 * self.rho_cyl(r * np.sin(th), r * np.cos(th)) * np.sin(th)
             return integrate(integrand, 0, np.pi)
 
         else:
@@ -1717,9 +1503,7 @@ class CDM_profile:
             elif np.all(np.array(r_encl) == 0):
                 return np.zeros_like(r_encl)
             else:
-                rmin = 1e-4 * min(
-                    self.rs, np.amin(np.array(r_encl)[np.array(r_encl) > 0])
-                )
+                rmin = 1e-4 * min(self.rs, np.amin(np.array(r_encl)[np.array(r_encl) > 0]))
                 rmax = np.amax(r_encl)
 
         def integrand(r):
@@ -1739,12 +1523,7 @@ class CDM_profile:
         else:
             sel = np.array(r_encl) > 0
             output = np.zeros_like(r_encl, "f")
-            output[sel] = np.array(
-                [
-                    integrand_interp.integral(rmin, r) + Mmin
-                    for r in np.array(r_encl)[sel]
-                ]
-            )
+            output[sel] = np.array([integrand_interp.integral(rmin, r) + Mmin for r in np.array(r_encl)[sel]])
             return output
 
     # Compute boundary conditions
@@ -1752,9 +1531,7 @@ class CDM_profile:
 
         # Integrals over outer halo needed for matching onto potential with
         # correct asymptotic form
-        self.potential_moments = self.compute_potential_moments(
-            r1, L_list=L_list, M_list=M_list
-        )
+        self.potential_moments = self.compute_potential_moments(r1, L_list=L_list, M_list=M_list)
 
         # Remember which L,M values the moments correspond to
         self.potential_moments_L_list = L_list
@@ -1808,13 +1585,7 @@ class CDM_profile:
 
                     # Compute rho_L for CDM halo
                     def rho_L(r):
-                        integrand = (
-                            lambda th: 2
-                            * np.pi
-                            * np.sin(th)
-                            * Z(L, 0, th, 0)
-                            * self.rho_sph(r, th)
-                        )
+                        integrand = lambda th: 2 * np.pi * np.sin(th) * Z(L, 0, th, 0) * self.rho_sph(r, th)
                         return integrate(integrand, 0, np.pi)
 
                     dJ_dr = lambda r, y: r ** (1 - L) * rho_L(r)
@@ -1835,85 +1606,3 @@ class CDM_profile:
         # End for loop over L
 
         return np.array(moments)
-
-    # def tosave(self):
-
-    #     outputs = {
-    #         "M200": self.M200,
-    #         "c": self.c,
-    #         "q0": self.q0,
-    #         "AC_prescription": self.AC_prescription,
-    #     }
-
-    #     if self.AC_prescription == "Gnedin":
-    #         outputs.update(Gnedin_params=self.Gnedin_params)
-    #     else:
-    #         pass
-
-    #     return outputs
-
-
-## Load profile
-# def load_profile(file_name, Phi_b=no_baryons, M_b=None, verbose=False):
-
-#     # Try to load a profile assuming it was a successful one
-#     try:
-#         data = np.load(file_name, allow_pickle=True)
-#         y = data["y"]
-#         params = data["params"]
-#         r_list = data["r_list"]
-#         L_list = data["L_list"]
-#         M_list = data["M_list"]
-
-#         if verbose:
-#             print("Computing outer halo")
-#         try:
-#             M200 = float(data["M200"])
-#             c = float(data["c"])
-#             q0 = float(data["q0"])
-#             AC_prescription = data["AC_prescription"]
-
-#             if AC_prescription == "Gnedin":
-#                 Gnedin_params = data["Gnedin_params"]
-#             else:
-#                 Gnedin_params = None
-
-#             outer_halo = CDM_profile(
-#                 M200,
-#                 c,
-#                 q0=q0,
-#                 Phi_b=Phi_b,
-#                 AC_prescription=AC_prescription,
-#                 Gnedin_params=Gnedin_params,
-#                 M_b=M_b,
-#             )
-
-#             if verbose:
-#                 print("Done computing outer halo")
-
-#         except:
-#             print("No outer halo profile found")
-#             outer_halo = None
-
-#         profile = isothermal_profile(
-#             y=y, params=params, r_list=r_list, L_list=L_list, M_list=M_list, Phi_b=Phi_b
-#         )
-#         success_test = True
-
-#     # Profile file may contain an error message if it failed to relax
-#     except:
-#         fail_msg = str(np.loadtxt(file_name, delimiter="None", dtype=str))
-#         print(fail_msg)
-#         if fail_msg == "relaxation failed":
-#             profile = None
-#             success_test = False
-
-#         else:
-#             raise Exception("%s cannot be loaded." % file_name)
-
-#     return profile, success_test
-
-
-# def load_profile(filename):
-#     with open(filename, "rb") as f:
-#         return dill.load(f)
