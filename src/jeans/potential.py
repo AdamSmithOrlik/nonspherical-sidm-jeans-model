@@ -16,9 +16,6 @@ This file contains functions for computing the gravitational potential from dens
 import numpy as np
 from inspect import signature
 from scipy.integrate import solve_ivp
-
-# from scipy.misc import derivative
-
 from .definitions import GN, Z, integrate
 
 
@@ -90,9 +87,7 @@ def Phi_LM(rho_LM, r, L, M=0):
                 return 0
 
         # Calculate integrals
-        solution = solve_ivp(
-            integrand, [rmin, rmax], [0], rtol=1e-6, atol=1e-6, t_eval=r_eval
-        )
+        solution = solve_ivp(integrand, [rmin, rmax], [0], rtol=1e-6, atol=1e-6, t_eval=r_eval)
         G_vals = solution.y[0]
 
         Phi_out[r_arr > 0] += prefactor / r_eval ** (L + 1) * G_vals

@@ -239,7 +239,7 @@ def compute_log_q_baryon_old(sph_halo, grid=None, R0=0, z0=0, **extraneous):
     Phi_b = sph_halo.outer.Phi_b
 
     if len(signature(Phi_b).parameters) == 1:
-        return lambda r: np.ones_like(r)
+        return lambda r: np.zeros_like(r)
 
     else:
 
@@ -333,7 +333,7 @@ def compute_q_baryon(sph_halo, **kwargs):
 
 
 @timed
-def compute_log_q_baryon(halo, num=100, method="exact", **extraneous):
+def compute_log_q_baryon(halo, rmin=None, num=100, method="leading", **extraneous):
     r"""
     Compute the logarithmic nonsphericity profile $\log q_b(r)$ of the baryon potential for a given halo (modern method).
 
@@ -368,14 +368,15 @@ def compute_log_q_baryon(halo, num=100, method="exact", **extraneous):
     num_variables = len(signature(Phi_b).parameters)
 
     # Create list of r values
-    rmin = 1e-6 * r200
+    if rmin == None:
+        rmin = 1e-6 * r200
     rmax = r200
     r_list = np.geomspace(rmin, rmax, num=num)
 
     # Calculate list of spherically averaged Phi_b
     # If Phi_b only depends on r, have a trivial shape qb = 1
     if num_variables == 1:
-        log_qb_list = np.ones_like(r_list)
+        log_qb_list = np.zeros_like(r_list)
 
     # Calculate log qb from formula
     # log qb = - 15/4 (G Mb / r)^-1 int_-1^1 dcos(th) P2(th) Phi_b(r,th)
@@ -527,7 +528,9 @@ def compute_q_iso_old(sph_halo, q0_func=None, rm_param=0.9, q_model=None, **kwar
 
 
 @timed
-def compute_q_iso(halo, rmin=None, rmax=None, extrap_method="constant", q0=None, max_iter=10, **kwargs):
+def compute_q_iso(
+    halo, rmin=None, rmax=None, extrap_method="constant", q0=None, max_iter=10, rmin_baryon=None, **kwargs
+):
     r"""
     Compute the isothermal nonsphericity profile $q_{\rm iso}(r)$ for a given halo (modern method).
 
@@ -582,7 +585,7 @@ def compute_q_iso(halo, rmin=None, rmax=None, extrap_method="constant", q0=None,
     log_r_list = np.log(r_list)
 
     # Inner halo shape from baryon distribution
-    log_qb_func = compute_log_q_baryon(halo, **kwargs)
+    log_qb_func = compute_log_q_baryon(halo, rmin=rmin_baryon, **kwargs)
 
     # Contribution to inner halo shape from baryon shape
     log_q_iso_b = lambda r: Mb(r) / Mtot(r) * log_qb_func(r)
@@ -698,11 +701,44 @@ def compute_q_iso(halo, rmin=None, rmax=None, extrap_method="constant", q0=None,
     else:
         raise Exception("Calculation of q_iso did not converge after %d iterations." % max_iter)
 
-    return lambda r: np.exp(log_q_iso(r))
+    # Make interpolation function for q_iso
+    # Raises error if evaluated beyond limits of interpolation
+    log_q_iso_list = np.array([log_q_iso(r) for r in r_list])
+    iso_interp = InterpolatedUnivariateSpline(log_r_list, log_q_iso_list, ext=2)
+
+    def q_iso_func(r):
+
+        # Handle case where r is a list or array recursively
+        if np.ndim(r) > 0:
+            return np.array([q_iso_func(ri) for ri in r])
+
+        # Handle case where r is a single number
+        else:
+            log_r = np.log(r)
+
+            # Extrapolates with linear function (in log r) for r < rmin
+            if (r < rmin) and (extrap_method == "linear"):
+                x = log_r_list[:2]
+                y = log_q_iso_list[:2]
+                return np.exp((y[1] * (log_r - x[0]) + y[0] * (x[1] - log_r)) / (x[1] - x[0]))
+
+            # Extrapolates with constant for r < rmin
+            elif (r < rmin) and (extrap_method == "constant"):
+                return np.exp(log_q_iso_list[0])
+
+            # Extrapolates with constant for r > rmax
+            elif r > rmax:
+                return np.exp(log_q_iso_list[-1])
+
+            # Use interpolation for rmin < r < rmax
+            else:
+                return np.exp(iso_interp(log_r))
+
+    return lambda r: q_iso_func(r)
 
 
 @timed
-def compute_q_eff(sph_halo, q0, Nm=1, **kwargs):
+def compute_q_eff(sph_halo, q0, Nm=1, old_method=False, **kwargs):
     r"""
     Compute the effective nonsphericity profile $q_{\rm eff}(r)$ for a given spherical halo, interpolating between $q_0$ and $q_{\rm iso}$.
 
@@ -746,7 +782,10 @@ def compute_q_eff(sph_halo, q0, Nm=1, **kwargs):
         N = lambda r: Nm * sph_halo.rho_sph_avg(r) / sph_halo.rho_sph_avg(r1)
 
         # Isothermal q profile
-        q_iso = compute_q_iso(sph_halo, q0=q0_func, **kwargs)
+        if old_method:
+            q_iso = compute_q_iso_old(sph_halo, q0=q0_func, **kwargs)
+        else:
+            q_iso = compute_q_iso(sph_halo, q0=q0_func, **kwargs)
 
         # Result from toy model calculation
         # k0 = 1 / (np.sqrt(2) * 5)
@@ -847,315 +886,3 @@ def compute_r_sph_grid(outer_halo, q_func, numr=30, numth=20):
         return interp(np.log(r), th_abs, grid=False) * r
 
     return r_sph_interp
-
-
-# def compute_q_baryon(sph_halo, grid=None, R0=0, z0=0, **extraneous):
-#     r"""
-#     Compute the nonsphericity profile $q(r)$ of the baryon potential for a given halo.
-
-#     Parameters
-#     ----------
-#     sph_halo : profile
-#         Spherical halo profile object (must have .outer.Phi_b).
-#     grid : array-like, optional
-#         Radial grid for calculation (default: auto-generated from halo properties).
-#     R0 : float, optional
-#         Reference $R$ coordinate for the axis ratio calculation (default: 0).
-#     z0 : float, optional
-#         Reference $z$ coordinate for the axis ratio calculation (default: 0).
-#     **extraneous : dict
-#         Additional keyword arguments (ignored).
-
-#     Returns
-#     -------
-#     q_baryon : callable
-#         Function returning baryon nonsphericity $q(r)$ as a function of $r$.
-
-#     Notes
-#     -----
-#     For a spherically symmetric potential, returns $q(r) = 0$ everywhere.
-#     For axisymmetric potentials, computes $q(r)$ by comparing the potential along the
-#     radial and axial directions, using spline interpolation and root finding.
-#     """
-
-#     # Baryon potential
-#     Phi_b = sph_halo.outer.Phi_b
-
-#     if len(signature(Phi_b).parameters) == 1:
-#         return lambda r: np.zeros_like(r)
-
-#     else:
-
-#         # Calculate nonsphericity of baryon potential
-#         if grid is None:
-#             r200 = sph_halo.outer.r200
-#             grid = np.geomspace(1e-6 * r200, r200)
-
-#         R_list = np.array(grid)
-#         r_list = np.sqrt(R_list**2 + z0**2)
-#         th1_list = np.arctan2(R_list, z0)
-#         th2_list = np.arctan2(R_list, -z0)
-#         Phi_radial_slice = np.abs(
-#             np.array(
-#                 [
-#                     0.5 * (Phi_b(r, th1) + Phi_b(r, th2))
-#                     for r, th1, th2 in zip(r_list, th1_list, th2_list)
-#                 ]
-#             )
-#         )
-
-#         z_list = np.array(grid)
-#         r_list = np.sqrt(R0**2 + z_list**2)
-#         th1_list = np.arctan2(R0, z_list)
-#         th2_list = np.arctan2(R0, -z_list)
-#         Phi_axial_slice = np.abs(
-#             np.array(
-#                 [
-#                     0.5 * (Phi_b(r, th1) + Phi_b(r, th2))
-#                     for r, th1, th2 in zip(r_list, th1_list, th2_list)
-#                 ]
-#             )
-#         )
-
-#         log_Phi_radial_interp = InterpolatedUnivariateSpline(
-#             np.log(R_list), np.log(Phi_radial_slice), ext=3
-#         )
-#         log_Phi_axial_interp = InterpolatedUnivariateSpline(
-#             np.log(z_list), np.log(Phi_axial_slice), ext=3
-#         )
-
-#         rmin = 2 * np.amax([R0, z0, grid[0]])
-#         rmax = grid[-1]
-
-#         r_list = np.geomspace(rmin, rmax, num=100)
-#         q_list = []
-
-#         for r in r_list:
-
-#             def f(q):
-#                 logz = 0.5 * np.log(r**2 * q ** (4 / 3) - R0**2 * q**2)
-#                 logR = 0.5 * np.log(r**2 * q ** (-2 / 3) - z0**2 * q**-2)
-#                 return log_Phi_radial_interp(logR) - log_Phi_axial_interp(logz)
-
-#             qmin, qmax = 0.5, 2
-
-#             while True:
-
-#                 try:
-#                     q_list.append(brentq(f, qmin, qmax))
-#                     break
-#                 except:
-#                     qmin = 0.5 * qmin
-#                     qmax = 2 * qmax
-
-#                 if qmax > 10**10:
-#                     q_list.append(1)
-#                     break
-
-#         return InterpolatedUnivariateSpline(r_list, q_list, ext=3)
-
-
-# def compute_q_iso(sph_halo, q_model=None, **kwargs):
-#     r"""
-#     Compute the isothermal nonsphericity profile $q_{\rm iso}(r)$ for a given spherical halo.
-
-#     Parameters
-#     ----------
-#     sph_halo : profile
-#         Spherical halo profile object.
-#     q_model : callable, optional
-#         Function $q_{\rm model}(q_b, f)$ to combine baryon and DM nonsphericity (default: built-in model).
-#     **kwargs : dict
-#         Additional arguments passed to `compute_q_baryon`.
-
-#     Returns
-#     -------
-#     q_iso : callable
-#         Isothermal nonsphericity profile $q_{\rm iso}(r)$ as a function of $r$.
-
-#     Notes
-#     -----
-#     The default $q_{\rm model}$ interpolates between the baryon potential nonsphericity $q_b$ and the DM fraction $f_{\rm dm}$.
-#     The result is a smooth function suitable for use in axis ratio calculations.
-#     """
-
-#     # sph_halo is profile object from spherical Jeans model
-#     r1 = sph_halo.r1
-#     r200 = sph_halo.outer.r200
-
-#     # Define array of r points for calculating q_iso
-#     r = np.geomspace(1e-6 * r200, r200)
-
-#     # Calculate DM fraction vs radius
-#     # Equivalent to fdm = Mdm(r) / (Mdm(r) + Mb(r))
-#     fdm = 1 / (1 + sph_halo.outer.M_b(r) / sph_halo.M_encl(r))
-
-#     # Nonsphericity q for baryon potential
-#     q_baryon = compute_q_baryon(sph_halo, **kwargs)
-#     qb = q_baryon(r)
-#     # print(qb)
-
-#     if not (q_model):
-
-#         def q_model(qb, f):
-#             F = f + f * (1 - f) * (-1 + 0.5 * qb)
-#             return qb * (1 - F) + F
-
-#     else:
-#         pass
-
-#     q_iso = InterpolatedUnivariateSpline(r, q_model(qb, fdm), ext=3)
-
-#     return q_iso
-
-
-# def compute_q_eff(sph_halo, q0, Nm=1, **kwargs):
-#     r"""
-#     Compute the effective nonsphericity profile $q_{\rm eff}(r)$ for a given spherical halo, interpolating between $q_0$ and $q_{\rm iso}$.
-
-#     Parameters
-#     ----------
-#     sph_halo : profile
-#         Spherical halo profile object.
-#     q0 : float or callable
-#         Collisionless (outer) axis ratio, or function of $r$.
-#     Nm : float, optional
-#         Number of averaged scatters per particle per lifetime of the halo at the matching radius (default: 1).
-#     **kwargs : dict
-#         Additional arguments passed to `compute_q_iso`.
-
-#     Returns
-#     -------
-#     q_eff : callable
-#         Effective nonsphericity profile $q_{\rm eff}(r)$ as a function of $r$.
-
-#     Notes
-#     -----
-#     $q_{\rm eff}(r)$ interpolates between the isothermal profile $q_{\rm iso}(r)$ and the collisionless value $q_0$ using a toy model for the number of DM scatters.
-#     For $r_1 \leq 0$, returns a constant or vectorized $q_0$.
-#     """
-
-#     # sph_halo is profile object from spherical Jeans model
-#     r1 = sph_halo.r1
-#     r200 = sph_halo.outer.r200
-
-#     # Define array of r points for calculating q_iso
-#     r = np.geomspace(1e-6 * r200, r200)
-
-#     # Define collisionless q0
-#     if callable(q0):
-#         q0_func = lambda r: q0(r)
-#     else:
-#         q0_func = lambda r: q0
-
-#     # Calculate number of scatters vs r
-#     if r1 > 0:
-
-#         N = lambda r: Nm * sph_halo.rho_sph_avg(r) / sph_halo.rho_sph_avg(r1)
-
-#         # Isothermal q profile
-#         q_iso = compute_q_iso(sph_halo, **kwargs)
-
-#         # Result from toy model calculation
-#         # k0 = 1 / (np.sqrt(2) * 5)
-#         k0 = np.sqrt(2) / 5
-
-#         def q_eff(r):
-#             log_qiso = np.log(q_iso(r))
-#             log_q0 = np.log(q0_func(r))
-#             log_q = log_qiso + (log_q0 - log_qiso) * np.exp(-k0 * N(r))
-#             return np.exp(log_q)
-
-#     else:
-#         q_eff = np.vectorize(q0_func)
-
-#     return q_eff
-
-
-# def compute_r_sph_grid(outer_halo, q_func, numr=30, numth=20):
-#     r"""
-#     Compute a grid and interpolator for the spheroidal radius as a function of $(r, \theta)$ for a given axis ratio profile $q(r)$.
-
-#     Parameters
-#     ----------
-#     outer_halo : profile
-#         Outer halo profile object (must have .r200).
-#     q_func : callable
-#         Function returning axis ratio $q(r)$.
-#     numr : int, optional
-#         Number of radial grid points (default: 30).
-#     numth : int, optional
-#         Number of theta grid points (default: 20).
-
-#     Returns
-#     -------
-#     r_sph_interp : callable
-#         Interpolator for spheroidal radius $r_{\rm sph}(r, \theta)$.
-
-#     Notes
-#     -----
-#     The function solves for the spheroidal radius $r_{\rm sph}$ at each $(r, \theta)$ by iteratively solving the equation:
-
-#         r_{\rm sph}^2 = R^2 q(r_{\rm sph})^{2/3} + z^2 q(r_{\rm sph})^{-4/3}
-
-#     where $R = r \sin\theta$ and $z = r \cos\theta$. The returned interpolator is symmetrized about $\theta = \pi/2$.
-#     """
-
-#     r200 = outer_halo.r200
-#     r_list = np.geomspace(1e-6 * r200, r200, num=numr)
-#     th_list = np.linspace(0, np.pi / 2, num=numth)
-
-#     sph_grid = np.zeros((numr, numth))
-
-#     # Spheroidal radius function
-#     def r_sph(r, th, max_iter=200, k=1, **kwargs):
-
-#         steps_to_damp = max_iter / 10
-
-#         R = r * np.sin(th)
-#         z = r * np.cos(th)
-
-#         rsph_old = r
-#         # start = t.time()
-#         for i in range(max_iter):
-
-#             rsph_new_calculated = np.sqrt(
-#                 R**2 * q_func(rsph_old) ** (2 / 3) + z**2 * q_func(rsph_old) ** (-4 / 3)
-#             )
-
-#             rsph_new = (1 - k) * rsph_old + k * rsph_new_calculated
-
-#             if np.allclose(rsph_new, rsph_old, **kwargs):
-#                 break
-
-#             rsph_old = rsph_new
-
-#             # if not converged within tolerance reduce the damping factor k by 0.1 every max_iter/10 iterations
-#             if i % steps_to_damp == 0:
-#                 k -= 0.1
-
-#         else:
-#             raise Exception(
-#                 "rsph did not converge within tolerance with max_iter=%d iterations for (r,th)=(%f,%f)"
-#                 % (max_iter, r, th)
-#             )
-
-#         # end = t.time()
-#         # print('Time taken for r=%f, th=%f is %f' % (r,th,end-start))
-#         return rsph_new
-
-#     # Calculate
-#     for i in range(numr):
-#         for j in range(numth):
-#             sph_grid[i, j] = r_sph(r_list[i], th_list[j]) / r_list[i]
-
-#     # Make interpolating function
-#     logr_list = np.log(r_list)
-#     interp = RectBivariateSpline(logr_list, th_list, sph_grid)
-
-#     def r_sph_interp(r, th):
-#         # Symmetrize in theta about np.pi/2
-#         th_abs = np.arccos(np.abs(np.cos(th)))
-#         return interp(np.log(r), th_abs, grid=False) * r
-
-#     return r_sph_interp

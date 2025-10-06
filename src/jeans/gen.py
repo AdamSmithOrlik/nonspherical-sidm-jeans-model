@@ -76,8 +76,17 @@ def squashed(r1, *outer_halo_params, q0=1, Phi_b=None, q_mode="smooth", **kwargs
                 halo = profile(inner=inner_halo, outer=outer_halo, q=q_eff)
                 return halo
 
+            elif q_mode == "old":
+
+                # Calculate q(r_sph) from spherical Jeans model profile using old method (fit ansatz)
+                sph_halo = profile(inner=inner_halo, outer=outer_halo)
+                q_eff = tools.compute_q_eff(sph_halo, q0, **kwargs)
+
+                halo = profile(inner=inner_halo, outer=outer_halo, q=q_eff)
+                return halo
+
             else:
-                raise Exception("Unknown q_mode=%s. Must be 'uniform' or 'smooth' only.")
+                raise Exception("Unknown q_mode=%s.")
 
         # Unsuccessful matching
         else:

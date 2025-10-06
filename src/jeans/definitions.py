@@ -41,13 +41,39 @@ def no_baryons(r):
         return np.zeros_like(r, "f")
 
 
+# Numerical derivative
+def central_derivative(f, x, dx):
+    r"""
+    Compute the numerical derivative of a function $f$ at point $x$ using the central difference formula.
+
+    Parameters
+    ----------
+    f : callable
+        Function to differentiate.
+    x : float
+        Point at which to evaluate the derivative.
+    dx : float
+        Step size for the finite difference.
+
+    Returns
+    -------
+    float
+        Approximate value of $f'(x)$ using central difference.
+
+    Notes
+    -----
+    Uses the formula:
+
+        f'(x) \approx [f(x + dx) - f(x - dx)] / (2 dx)
+    """
+    return (f(x + dx) - f(x - dx)) / (2 * dx)
+
+
 # Use custom integration function throughout
 def integrate(func, xmin, xmax, atol=1e-8, rtol=1e-8, args=()):
 
     try:
-        output = quad(
-            func, xmin, xmax, args=tuple(args), limit=50, epsabs=atol, epsrel=rtol
-        )[0]
+        output = quad(func, xmin, xmax, args=tuple(args), limit=50, epsabs=atol, epsrel=rtol)[0]
 
     except:
 
@@ -66,9 +92,7 @@ def Z(L, M, theta, phi):
     x = np.cos(theta)
 
     if M == 0:
-        return (
-            Condon_Shortley_phase * np.sqrt((2 * L + 1) / (4 * np.pi)) * lpmv(0, L, x)
-        )
+        return Condon_Shortley_phase * np.sqrt((2 * L + 1) / (4 * np.pi)) * lpmv(0, L, x)
     elif M > 0:
         fact = lambda num: factorial(num, exact=True)
         return (

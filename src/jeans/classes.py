@@ -26,10 +26,10 @@ from scipy.interpolate import (
     InterpolatedUnivariateSpline,
     RectBivariateSpline,
 )
-from scipy.optimize import brentq, fsolve
+from scipy.optimize import brentq, fsolve, curve_fit
 
 
-from .definitions import GN, Z, integrate, no_baryons
+from .definitions import GN, Z, integrate, no_baryons, central_derivative
 from .cdm import (
     AC_profiles,
     Einasto_profiles,
@@ -671,7 +671,7 @@ class profile:
 
             rho = self.rho_dm_sph
             r_spheroid = lambda th, q: r_eff / np.sqrt(
-                (np.sin(th) * q ** (2 / 3)) ** 2 + (np.cos(th) * q ** (-1 / 3)) ** 2
+                (np.sin(th) * q ** (1 / 3)) ** 2 + (np.cos(th) * q ** (-2 / 3)) ** 2
             )
             r_min = lambda th: 0
 
@@ -755,6 +755,71 @@ class profile:
 
         else:
             raise Exception("r must be 0D or 1D.")
+
+    def V_and_q_from_force(self, r, Lmax=10, **kwargs):
+        if np.ndim(r) == 0:
+            r = np.array([r])
+        thetas = np.linspace(0, np.pi / 2, 7)
+        theta = np.pi / 2  # plane of disk
+        rgrid, tgrid = np.meshgrid(r, thetas)
+
+        Fr = np.zeros(rgrid.shape)
+        Ftheta = np.zeros(rgrid.shape)
+
+        Vsq_tot = np.zeros_like(r, "f")  # initialize
+
+        for L in range(0, Lmax + 1, 2):
+            # print('L = ', L)
+            Vc_sq_L = self.Vsq_LM(r, L)
+            Fr_L = Vc_sq_L / r
+
+            Z_theta = lambda x: Z(L, 0, x, 0)
+            Z_L = Z_theta(thetas)
+
+            Fr = Fr - np.array([Fr_L * z_l for z_l in Z_L])
+
+            if L > 0:
+                Phi_L = self.Phi_LM(r, L) / r
+                dZdtheta_L = central_derivative(Z_theta, thetas, dx=1e-2 * np.pi)
+                Ftheta = Ftheta - np.array([Phi_L * dz_l for dz_l in dZdtheta_L])
+
+            # rho_LM = self.rho_LM_interp(L,0,**kwargs)
+            # Calculate LM mode contribution
+            Vsq_old = np.array(Vsq_tot)
+            Vsq_tot += Vc_sq_L * Z(L, 0, theta, 0)
+
+            if np.allclose(Vsq_tot, Vsq_old, rtol=1e-3, atol=1e-3):
+                # print('Converged at L = ', L)
+                break
+
+        # pure monopole, spherical case
+        if Lmax == 0:
+            V_sq_b = self.Vsq_baryon(r)
+            return np.sqrt(Vsq_tot + V_sq_b), np.ones_like(r)
+
+        def obj_curve(r):
+            def fix_r(theta, q):
+                rho = r * np.sin(theta)
+                z = r * np.cos(theta)
+                m = np.sqrt(rho**2 + z**2 / q**2)
+                return r**2 / 2 / (m**2) * (1 - 1 / q**2) * np.sin(2 * theta)
+
+            return fix_r
+
+        qr = []
+        perr = []
+        for i in range(len(r)):
+            obj = obj_curve(r[i])
+            x = thetas
+            y = Ftheta[:, i] / Fr[:, i]
+            popt, pcov = curve_fit(obj, x, y)
+            perr.append(np.sqrt(np.diag(pcov)))
+            qr.append(popt[0])
+
+        qr = np.array(qr)
+        V_sq_b = self.Vsq_baryon(r)
+
+        return np.sqrt(Vsq_tot + V_sq_b), qr
 
     def save(self, filename):
         with open(filename, "wb") as f:

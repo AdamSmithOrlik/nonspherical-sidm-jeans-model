@@ -17,40 +17,12 @@ import numpy as np
 from inspect import signature
 from scipy.integrate import solve_ivp
 
-from .definitions import GN, Z, integrate
+from .definitions import GN, Z, integrate, central_derivative
 
 
 ######################################################################
 ######################## FUNCTION DEFINITIONS ########################
 ######################################################################
-# Numerical derivative
-def central_derivative(f, x, dx):
-    r"""
-    Compute the numerical derivative of a function $f$ at point $x$ using the central difference formula.
-
-    Parameters
-    ----------
-    f : callable
-        Function to differentiate.
-    x : float
-        Point at which to evaluate the derivative.
-    dx : float
-        Step size for the finite difference.
-
-    Returns
-    -------
-    float
-        Approximate value of $f'(x)$ using central difference.
-
-    Notes
-    -----
-    Uses the formula:
-
-        f'(x) \approx [f(x + dx) - f(x - dx)] / (2 dx)
-    """
-    return (f(x + dx) - f(x - dx)) / (2 * dx)
-
-
 # Baryon contributions to rotation curve
 def Vsq_baryon(Phi_b, r):
     r"""
@@ -89,22 +61,15 @@ def Vsq_baryon(Phi_b, r):
     #     dPhi_b_dr[pos] = np.array([derivative(lambda r: Phi_b(r,theta), ri, dx=1e-2*ri) for ri in r_arr[pos]])
 
     if num_Phi_b_variables == 1:
-        dPhi_b_dr[pos] = np.array(
-            [central_derivative(Phi_b, ri, dx=1e-2 * ri) for ri in r_arr[pos]]
-        )
+        dPhi_b_dr[pos] = np.array([central_derivative(Phi_b, ri, dx=1e-2 * ri) for ri in r_arr[pos]])
 
     elif num_Phi_b_variables == 2:
         theta = np.pi / 2
         dPhi_b_dr[pos] = np.array(
-            [
-                central_derivative(lambda r: Phi_b(r, theta), ri, dx=1e-2 * ri)
-                for ri in r_arr[pos]
-            ]
+            [central_derivative(lambda r: Phi_b(r, theta), ri, dx=1e-2 * ri) for ri in r_arr[pos]]
         )
     else:
-        raise Exception(
-            "Case with %d Phi_b arguments not supported." % num_Phi_b_variables
-        )
+        raise Exception("Case with %d Phi_b arguments not supported." % num_Phi_b_variables)
 
     Vsq_out = r_arr * dPhi_b_dr
 
@@ -159,9 +124,7 @@ def Vsq_LM(rho_LM, r, L, M=0):
     r_arr = np.array(r, dtype="float")[order]
     r_eval = r_arr[r_arr > 0]
     if r_eval.size == 0:
-        print(
-            f"[Vsq_LM] Warning: r_eval is empty for L={L}. Skipping integration and returning zeros."
-        )
+        print(f"[Vsq_LM] Warning: r_eval is empty for L={L}. Skipping integration and returning zeros.")
         # Return zeros in the same shape as r_arr, reordered to match input
         Vsq_out = np.zeros_like(r_arr)
         unorder = np.argsort(order)
@@ -198,9 +161,7 @@ def Vsq_LM(rho_LM, r, L, M=0):
         #     print("[Vsq_LM] Error evaluating rho_LM on r_eval[:3]:", e)
 
         # Calculate integrals
-        solution = solve_ivp(
-            integrand, [rmin, rmax], [0], rtol=1e-6, atol=1e-6, t_eval=r_eval
-        )
+        solution = solve_ivp(integrand, [rmin, rmax], [0], rtol=1e-6, atol=1e-6, t_eval=r_eval)
         # print("[Vsq_LM] solution.t:", solution.t)
         # print("[Vsq_LM] solution.y shape:", solution.y.shape)
         if solution.y.shape[0] == 0 or solution.y.shape[1] == 0:
@@ -215,9 +176,7 @@ def Vsq_LM(rho_LM, r, L, M=0):
             if idx.size > 0:
                 G_vals[i] = solution.y[0][idx[0]]
             else:
-                print(
-                    f"[Vsq_LM] WARNING: ODE solver did not return value for r={rval}. Filling with np.nan."
-                )
+                print(f"[Vsq_LM] WARNING: ODE solver did not return value for r={rval}. Filling with np.nan.")
         # print("[Vsq_LM] G_vals (aligned):", G_vals)
 
         mask = r_arr > 0
