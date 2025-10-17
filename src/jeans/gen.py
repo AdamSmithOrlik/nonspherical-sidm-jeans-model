@@ -38,7 +38,7 @@ def spherical(r1, *outer_halo_params, Phi_b=None, **kwargs):
 
 
 # Squashed Jeans model
-def squashed(r1, *outer_halo_params, q0=1, Phi_b=None, q_mode="smooth", **kwargs):
+def squashed(r1, *outer_halo_params, q0=1, Phi_b=None, q_mode="smooth", sigma_v=None, nu0_func=None, **kwargs):
 
     # CDM profile
     if r1 == 0:
@@ -56,7 +56,7 @@ def squashed(r1, *outer_halo_params, q0=1, Phi_b=None, q_mode="smooth", **kwargs
 
         # Spherical Jeans model (with spherically averaged potential)
         # Matched onto spherical outer halo
-        inner_halo, success = sphmodel.relaxation(r1, outer_halo, Phi_b=Phi_b_sph, **kwargs)
+        inner_halo, success = sphmodel.relaxation(r1, outer_halo, Phi_b=Phi_b_sph, sigma_v=sigma_v, **kwargs)
 
         # Matching was successful
         if success:
@@ -71,9 +71,13 @@ def squashed(r1, *outer_halo_params, q0=1, Phi_b=None, q_mode="smooth", **kwargs
 
                 # Calculate q(r_sph) from spherical Jeans model profile
                 sph_halo = profile(inner=inner_halo, outer=outer_halo)
-                q_eff = tools.compute_q_eff(sph_halo, q0, **kwargs)
+                q_eff = tools.compute_q_eff(sph_halo, q0, sigma_v=sigma_v, nu0_func=nu0_func, **kwargs)
 
                 halo = profile(inner=inner_halo, outer=outer_halo, q=q_eff)
+
+                for name in ("N", "nu", "mean_sigv"):
+                    if hasattr(q_eff, name):
+                        setattr(halo, name, getattr(q_eff, name))
                 return halo
 
             elif q_mode == "old":

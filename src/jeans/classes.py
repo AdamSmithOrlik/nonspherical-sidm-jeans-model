@@ -833,7 +833,7 @@ class profile:
 
 class isothermal_profile:
 
-    def __init__(self, y, params, r_list, Phi_b=None, L_list=[0], M_list=[0]):
+    def __init__(self, y, params, r_list, Phi_b=None, sigma_v=None, L_list=[0], M_list=[0]):
 
         # Some preliminary definitions
         self.num_func = 2 * len(L_list)
@@ -846,6 +846,7 @@ class isothermal_profile:
         self.r0 = params[0] ** 0.5
         self.sigma0 = params[1] ** 0.5
         self.rho0 = self.sigma0**2 / (4 * np.pi * GN * self.r0**2)
+        self.sigma_v = sigma_v  # velocity dependent sigma_v profile if provided
 
         self.vrel = self.sigma0 * 4 / np.sqrt(np.pi)
         self.r1 = r_list[-1]
@@ -1157,16 +1158,58 @@ class isothermal_profile:
 
         # End of rho_sph (DM density)
 
+    def _mean_sigma_v_core(self):
+        """
+        Computes the average <sigma v> in the isothermal core, assuming a Maxwellian relative velocity
+        distribution with 1D velocity dispersion sigma0.
+        Returns:
+            <sigma v> (cm^2/g * km/s) or None if no velocity dependence provided
+        """
+        if self.sigma_v is None:
+            return None
+
+        nu0 = self.sigma0  # 1D dispersion in the isothermal core
+
+        # Relative-speed PDF for identical Maxwellians with 1D dispersion nu0:
+        # P(v) = v^2 * exp(-v^2/(4 nu0^2)) / (2 sqrt(pi) nu0^3)
+        def rel_pdf(v):
+            return (v * v) * np.exp(-v * v / (4.0 * nu0 * nu0)) / (2.0 * np.sqrt(np.pi) * nu0**3)
+
+        # Compute <sigma v> = int dv sigma(v) * v * P(v)
+        integrand = lambda v: self.sigma_v(max(v, 1e-12)) * v * rel_pdf(v)
+        return integrate(integrand, 0.0, np.inf, atol=1e-8, rtol=1e-8)
+
     def cross_section(self, t_age=10, Nm=1):
-
+        """
+        Computes the effective constant cross section sigma/m (in cm^2/g) that would yield
+        the desired number of scatterings Nm at radius r1 over time t_age (in Gyr).
+        If a velocity-dependent sigma_v is provided, also computes the actual
+        <sigma v> in the core and the effective constant sigma/m that would yield the same
+        scattering rate at r1.
+        Returns:
+            If no velocity dependence: sigma_over_m (cm^2/g)
+            If velocity dependence: (sigma_over_m_eff_req (cm^2/g), <sigma v> (cm^2/g * km/s))
+        """
         rho1 = self.rho_sph(self.r1)
-        vrel = self.vrel
+        conversion = 4.685e9  # 1/(M_sun/kpc^3 * km/s * Gyr) to cm^2/g
 
-        # convert 1/(M_sol/kpc^3 * km/s * Gyr) to cm^2/g
-        conversion = 4.685e9
+        if self.sigma_v is None:
+            # No velocity dependence, just return constant sigma/m
+            vrel = self.vrel
+            sigma_over_m = Nm / (rho1 * vrel * t_age) * conversion
+            return sigma_over_m
 
-        sigma_over_m = Nm / (rho1 * vrel * t_age) * conversion
-        return sigma_over_m
+        # Velocity-dependent case
+        vmean_core = 4.0 * self.sigma0 / np.sqrt(np.pi)  # <v_rel> for Maxwellian core
+        # Required <sigma v> at r1 to get Nm scatterings in t_age:
+        required_sigv = Nm / (rho1 * t_age) * conversion  # (cm^2/g) * (km/s)
+        # Actual <sigma v> from your callable in the core:
+        sigv = self._mean_sigma_v_core()  # (cm^2/g) * (km/s)
+
+        # Report the effective constant sigma/m that would satisfy the rate at r1
+        sigma_over_m_eff_req = required_sigv / vmean_core  # cm^2/g
+
+        return sigma_over_m_eff_req, sigv
 
     def angular_moments(self, r, L=0):
 

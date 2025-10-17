@@ -737,68 +737,188 @@ def compute_q_iso(
     return lambda r: q_iso_func(r)
 
 
+# @timed
+# def compute_q_eff(sph_halo, q0, Nm=1, old_method=False, **kwargs):
+#     r"""
+#     Compute the effective nonsphericity profile $q_{\rm eff}(r)$ for a given spherical halo, interpolating between $q_0$ and $q_{\rm iso}$.
+
+#     Parameters
+#     ----------
+#     sph_halo : profile
+#         Spherical halo profile object.
+#     q0 : float or callable
+#         Collisionless (outer) axis ratio, or function of $r$.
+#     Nm : float, optional
+#         Number of averaged scatters per particle per lifetime of the halo at the matching radius (default: 1).
+#     **kwargs : dict
+#         Additional arguments passed to `compute_q_iso`.
+
+#     Returns
+#     -------
+#     q_eff : callable
+#         Effective nonsphericity profile $q_{\rm eff}(r)$ as a function of $r$.
+
+#     Notes
+#     -----
+#     $q_{\rm eff}(r)$ interpolates between the isothermal profile $q_{\rm iso}(r)$ and the collisionless value $q_0$ using a toy model for the number of DM scatters.
+#     For $r_1 \leq 0$, returns a constant or vectorized $q_0$.
+#     """
+#     # sph_halo is profile object from spherical Jeans model
+#     r1 = sph_halo.r1
+#     r200 = sph_halo.outer.r200
+
+#     # Define array of r points for calculating q_iso
+#     r = np.geomspace(1e-6 * r200, r200)
+
+#     # Define collisionless q0
+#     if callable(q0):
+#         q0_func = lambda r: q0(r)
+#     else:
+#         q0_func = lambda r: q0
+
+#     # Calculate number of scatters vs r
+#     if r1 > 0:
+
+#         N = lambda r: Nm * sph_halo.rho_sph_avg(r) / sph_halo.rho_sph_avg(r1)
+
+#         # Isothermal q profile
+#         if old_method:
+#             q_iso = compute_q_iso_old(sph_halo, q0=q0_func, **kwargs)
+#         else:
+#             q_iso = compute_q_iso(sph_halo, q0=q0_func, **kwargs)
+
+#         # Result from toy model calculation
+#         # k0 = 1 / (np.sqrt(2) * 5)
+#         k0 = np.sqrt(2) / 5
+
+#         def q_eff(r):
+#             log_qiso = np.log(q_iso(r))
+#             log_q0 = np.log(q0_func(r))
+#             log_q = log_qiso + (log_q0 - log_qiso) * np.exp(-k0 * N(r))
+#             return np.exp(log_q)
+
+#     else:
+#         q_eff = np.vectorize(q0_func)
+
+
+#     return q_eff
 @timed
-def compute_q_eff(sph_halo, q0, Nm=1, old_method=False, **kwargs):
-    r"""
-    Compute the effective nonsphericity profile $q_{\rm eff}(r)$ for a given spherical halo, interpolating between $q_0$ and $q_{\rm iso}$.
-
-    Parameters
-    ----------
-    sph_halo : profile
-        Spherical halo profile object.
-    q0 : float or callable
-        Collisionless (outer) axis ratio, or function of $r$.
-    Nm : float, optional
-        Number of averaged scatters per particle per lifetime of the halo at the matching radius (default: 1).
-    **kwargs : dict
-        Additional arguments passed to `compute_q_iso`.
-
-    Returns
-    -------
-    q_eff : callable
-        Effective nonsphericity profile $q_{\rm eff}(r)$ as a function of $r$.
-
-    Notes
-    -----
-    $q_{\rm eff}(r)$ interpolates between the isothermal profile $q_{\rm iso}(r)$ and the collisionless value $q_0$ using a toy model for the number of DM scatters.
-    For $r_1 \leq 0$, returns a constant or vectorized $q_0$.
-    """
-    # sph_halo is profile object from spherical Jeans model
+def compute_q_eff(
+    sph_halo,
+    q0,
+    Nm=1.0,
+    old_method=False,
+    sigma_v=None,  # velocity-dependent cross section callable v[km/s] -> sigma[v]
+    nu0_func=None,  # optional function for 1D velocity dispersion vs radius if known
+    **kwargs,
+):
     r1 = sph_halo.r1
-    r200 = sph_halo.outer.r200
 
-    # Define array of r points for calculating q_iso
-    r = np.geomspace(1e-6 * r200, r200)
+    # q0 as before
+    q0_func = q0 if callable(q0) else (lambda rr: q0)
 
-    # Define collisionless q0
-    if callable(q0):
-        q0_func = lambda r: q0(r)
+    if sigma_v is not None:
+
+        def _nu0(rr):
+            if nu0_func is not None:
+                return nu0_func(rr)
+
+            sigma0 = sph_halo.inner.sigma0
+            r1_loc = sph_halo.r1
+
+            # Build a reusable Jeans table once per sph_halo
+            tab = getattr(sph_halo, "_nujeans_tab_M", None)
+            if tab is None:
+                r200 = sph_halo.outer.r200
+                smin = max(1e-8 * r200, 1e-8 * r1_loc)
+                smax = 8.0 * r200
+                s = np.geomspace(smin, smax, 256)  # 256 points from smin to smax
+
+                rho_s = sph_halo.rho_sph_avg(s)
+                M_s = sph_halo.M_encl(s)  # vectorized
+                integrand = rho_s * (GN * M_s / (s * s))  # rho * GM/s^2
+
+                # Integrate
+                ds = np.diff(s)
+                seg = 0.5 * (integrand[:-1] + integrand[1:]) * ds
+                J = np.empty_like(s)
+                J[-1] = 0.0
+                J[:-1] = np.flip(np.cumsum(np.flip(seg)))
+
+                sph_halo._nujeans_tab_M = {"s": s, "rho_s": rho_s, "J": J}
+                tab = sph_halo._nujeans_tab_M
+
+            s = tab["s"]
+            rho_s = tab["rho_s"]
+            J = tab["J"]
+
+            # ad hoc smoothing near r1 to avoid discontinuity in derivative
+            # NB: This needs to be improved...
+            r_a = 0.7 * r1_loc
+            r_b = 1.3 * r1_loc
+
+            def _w_inner(r):
+                t = (r - r_a) / max(r_b - r_a, 1e-30)
+                t = np.clip(t, 0.0, 1.0)
+                S = t * t * (3.0 - 2.0 * t)
+                return 1.0 - S
+
+            r = np.atleast_1d(np.asarray(rr, dtype=float))
+            r_clip = np.clip(r, s[0], s[-1])
+
+            # sigma_r^2(r) = I(r) / ρ(r), with I(r) ≈ J(r) via interp on the precomputed grid
+            I_r = np.interp(r_clip, s, J)
+            rho_r = np.maximum(np.interp(r_clip, s, rho_s), 1e-300)
+            nuJ = np.sqrt(np.maximum(I_r / rho_r, 0.0))
+
+            w = _w_inner(r_clip)
+            out = w * sigma0 + (1.0 - w) * nuJ
+            return out if out.size > 1 else float(out[0])
+
+        def _mean_sigv(nu0):
+            # Compute average of sigma v over Maxwellian with 1D dispersion nu0
+            def integrand(v):
+                pdf = (v * v) * np.exp(-v * v / (4.0 * nu0 * nu0)) / (2.0 * np.sqrt(np.pi) * nu0**3)
+                return sigma_v(max(v, 1e-12)) * v * pdf
+
+            return integrate(integrand, 0.0, np.inf, atol=1e-8, rtol=1e-8)
+
+    # Velocity-independent cross section case
+    if sigma_v is None:
+        N = lambda rr: Nm * sph_halo.rho_sph_avg(rr) / sph_halo.rho_sph_avg(r1)
+    # Velocity-dependent cross section case
     else:
-        q0_func = lambda r: q0
 
-    # Calculate number of scatters vs r
-    if r1 > 0:
+        def N(rr):
+            rho = sph_halo.rho_sph_avg(rr)
+            rho_m = sph_halo.rho_sph_avg(r1)
+            nu = _nu0(rr)
+            nu_m = _nu0(r1)
 
-        N = lambda r: Nm * sph_halo.rho_sph_avg(r) / sph_halo.rho_sph_avg(r1)
+            # Compute mean sigma*v at rr and at r1
+            if np.ndim(nu) > 0:
+                # preserve shape of nu
+                sigv = np.array([_mean_sigv(float(nu_i)) for nu_i in np.atleast_1d(nu)], dtype=float)
+            else:
+                sigv = _mean_sigv(float(nu))
 
-        # Isothermal q profile
-        if old_method:
-            q_iso = compute_q_iso_old(sph_halo, q0=q0_func, **kwargs)
-        else:
-            q_iso = compute_q_iso(sph_halo, q0=q0_func, **kwargs)
+            sigv_m = _mean_sigv(float(nu_m))
 
-        # Result from toy model calculation
-        # k0 = 1 / (np.sqrt(2) * 5)
-        k0 = np.sqrt(2) / 5
+            return Nm * (rho * sigv) / (rho_m * sigv_m)
 
-        def q_eff(r):
-            log_qiso = np.log(q_iso(r))
-            log_q0 = np.log(q0_func(r))
-            log_q = log_qiso + (log_q0 - log_qiso) * np.exp(-k0 * N(r))
-            return np.exp(log_q)
+    # q_iso as before
+    q_iso = (compute_q_iso_old if old_method else compute_q_iso)(sph_halo, q0=q0_func, **kwargs)
+    k0 = np.sqrt(2) / 5
 
-    else:
-        q_eff = np.vectorize(q0_func)
+    def q_eff(rr):
+        lqi = np.log(q_iso(rr))
+        lq0 = np.log(q0_func(rr))
+        return np.exp(lqi + (lq0 - lqi) * np.exp(-k0 * N(rr)))
+
+    # Save as attributes to be promoted to profile object in gen.py
+    q_eff.N = lambda r: N(r)
+    q_eff.nu = lambda r: _nu0(r) if sigma_v is not None else None
+    q_eff.mean_sigv = lambda r: _mean_sigv(_nu0(r)) if sigma_v is not None else None
 
     return q_eff
 
