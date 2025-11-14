@@ -2,23 +2,25 @@ from .classes import profile, CDM_profile, isothermal_profile
 from . import tools
 from . import spherical as sphmodel
 from . import nonspherical
+from .tools import timed
 
 # Generate profile object from inputs
 
 
 # Spherical isothermal Jeans model
-def spherical(r1, *outer_halo_params, Phi_b=None, **kwargs):
+@timed
+def spherical(r1, *outer_halo_params, Phi_b=None, halo_type="NFW", gamma=0.3, **kwargs):
 
     # CDM profile
     if r1 == 0:
-        outer_halo = CDM_profile(*outer_halo_params, q0=1, Phi_b=Phi_b, **kwargs)
+        outer_halo = CDM_profile(*outer_halo_params, q0=1, Phi_b=Phi_b, halo_type=halo_type, gamma=gamma, **kwargs)
         return profile(outer=outer_halo)
 
     # Spherical Jeans profile
     else:
 
         # CDM outer profile (spherical)
-        outer_halo = CDM_profile(*outer_halo_params, q0=1, Phi_b=Phi_b, **kwargs)
+        outer_halo = CDM_profile(*outer_halo_params, q0=1, Phi_b=Phi_b, halo_type=halo_type, gamma=gamma, **kwargs)
 
         # Compute spherically averaged potential from enclosed mass profile (computed within outer_halo)
         Phi_b_sph = tools.compute_Phi_b_spherical(outer_halo.M_b, 1e-6 * outer_halo.r200, outer_halo.r200)
@@ -38,18 +40,18 @@ def spherical(r1, *outer_halo_params, Phi_b=None, **kwargs):
 
 
 # Squashed Jeans model
-def squashed(r1, *outer_halo_params, q0=1, Phi_b=None, q_mode="smooth", **kwargs):
+@timed
+def squashed(r1, *outer_halo_params, q0=1, Phi_b=None, halo_type="NFW", gamma=0.3, q_mode="smooth", **kwargs):
 
     # CDM profile
     if r1 == 0:
-        return cdm(*outer_halo_params, q0=q0, Phi_b=Phi_b, **kwargs)
-
+        return cdm(*outer_halo_params, q0=q0, Phi_b=Phi_b, halo_type=halo_type, gamma=gamma, **kwargs)
     # Squashed Jeans profile
     # Start with spherical profiles
     else:
 
         # CDM outer profile (spherical)
-        outer_halo = CDM_profile(*outer_halo_params, q0=1, Phi_b=Phi_b, **kwargs)
+        outer_halo = CDM_profile(*outer_halo_params, q0=1, Phi_b=Phi_b, halo_type=halo_type, gamma=gamma, **kwargs)
 
         # Compute spherically averaged potential from enclosed mass profile (computed within outer_halo)
         Phi_b_sph = tools.compute_Phi_b_spherical(outer_halo.M_b, 1e-6 * outer_halo.r200, outer_halo.r200)
@@ -94,17 +96,17 @@ def squashed(r1, *outer_halo_params, q0=1, Phi_b=None, q_mode="smooth", **kwargs
 
 
 # Nonspherical isothermal Jeans model
-def isothermal(r1, *outer_halo_params, q0=1, Phi_b=None, **kwargs):
+@timed
+def isothermal(r1, *outer_halo_params, q0=1, Phi_b=None, halo_type="NFW", gamma=0.3, **kwargs):
 
     # CDM profile
     if r1 == 0:
-        return cdm(*outer_halo_params, q0=q0, Phi_b=Phi_b, **kwargs)
-
+        return cdm(*outer_halo_params, q0=q0, Phi_b=Phi_b, halo_type=halo_type, gamma=gamma, **kwargs)
     # Isothermal nonspherical Jeans profile
     else:
 
         # CDM outer halo
-        outer_halo = CDM_profile(*outer_halo_params, q0=q0, Phi_b=Phi_b, **kwargs)
+        outer_halo = CDM_profile(*outer_halo_params, q0=q0, Phi_b=Phi_b, halo_type=halo_type, gamma=gamma, **kwargs)
 
         # Nonspherical Jeans model matched onto nonspherical outer halo
         inner_halo, success = nonspherical.relaxation(r1, outer_halo, Phi_b=outer_halo.Phi_b, **kwargs)
@@ -119,10 +121,11 @@ def isothermal(r1, *outer_halo_params, q0=1, Phi_b=None, **kwargs):
 
 
 # CDM profile
-def cdm(*outer_halo_params, q0=1, Phi_b=None, **kwargs):
+@timed
+def cdm(*outer_halo_params, q0=1, Phi_b=None, halo_type="NFW", gamma=0.3, **kwargs):
 
     # Spherically symmetric CDM halo
-    outer_halo = CDM_profile(*outer_halo_params, Phi_b=Phi_b, **kwargs)
+    outer_halo = CDM_profile(*outer_halo_params, Phi_b=Phi_b, halo_type=halo_type, gamma=gamma, **kwargs)
 
     # Return profile object squashed by q0
     return profile(outer=outer_halo, q=q0)

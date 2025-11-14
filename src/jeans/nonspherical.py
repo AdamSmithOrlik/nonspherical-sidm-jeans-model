@@ -25,7 +25,7 @@ from inspect import signature
 from . import spherical as sphmodel
 from .definitions import GN, Z, integrate
 from .classes import isothermal_profile, CDM_profile
-from .utils import timed
+from .tools import timed
 
 
 ########################################################################
@@ -108,9 +108,7 @@ def relaxation(
             print(" Step 2: Relaxation with L =", L_list)
 
         profile.update(angular_moments_set=True, L_list=L_list)
-        profile, success_flag = loop_relaxation(
-            profile, outer_halo, max_iter=max_iter, verbose=verbose, tol=finaltol
-        )
+        profile, success_flag = loop_relaxation(profile, outer_halo, max_iter=max_iter, verbose=verbose, tol=finaltol)
 
     # Step 3: Check convergence
     elif success_flag and (converge is not None):
@@ -254,9 +252,7 @@ def iterate_relaxation(profile, outer_halo):
 
 # This performs a loop of multiple relaxation iterations, terminating
 # when result converges within tol or max_iter iterations have occured
-def loop_relaxation(
-    profile, outer_halo, max_iter=100, plots=False, verbose=False, tol=1e-4
-):
+def loop_relaxation(profile, outer_halo, max_iter=100, plots=False, verbose=False, tol=1e-4):
 
     num_iter = 1
     converged_flag = False
@@ -273,10 +269,7 @@ def loop_relaxation(
             converged_flag = np.allclose(new_y_all, old_y_all, atol=tol, rtol=tol)
 
         if verbose:
-            print(
-                "  iteration %d: relaxation stepsize = %f, converged %s"
-                % (num_iter, kappa, str(converged_flag))
-            )
+            print("  iteration %d: relaxation stepsize = %f, converged %s" % (num_iter, kappa, str(converged_flag)))
 
         num_iter += 1
 
@@ -311,9 +304,7 @@ def F(profile, i):
         term_1 = 0
         phi_dm = phi_00_bar * Z(0, 0, 0, 0)
         phi_b = (Phi_b(r_bar) - Phi_b(0)) / sigma0**2
-        term_2 = (
-            -(r_bar**2) / r0**2 * 4 * np.pi * Z(0, 0, 0, 0) * np.exp(-phi_b - phi_dm)
-        )
+        term_2 = -(r_bar**2) / r0**2 * 4 * np.pi * Z(0, 0, 0, 0) * np.exp(-phi_b - phi_dm)
 
     elif (num_variables == 1) & (profile.L_list != [0]):
 
@@ -323,8 +314,7 @@ def F(profile, i):
 
         # mean values of phi and mu
         y_bar = 0.5 * (
-            profile.y[num_func * i : num_func * (i + 1)]
-            + profile.y[num_func * (i + 1) : num_func * (i + 2)]
+            profile.y[num_func * i : num_func * (i + 1)] + profile.y[num_func * (i + 1) : num_func * (i + 2)]
         )
         phi_L_bar = y_bar[: len(L_list)]
         mu_L_bar = y_bar[len(L_list) :]
@@ -341,23 +331,10 @@ def F(profile, i):
 
         term_1 = -L_list * (L_list + 1) * phi_L_bar
         if profile.angular_moments_set:
-            term_2 = (
-                -(r_bar**2)
-                / r0**2
-                * 4
-                * np.pi
-                * np.array([profile.angular_moments(r_bar, L) for L in L_list])
-            )
+            term_2 = -(r_bar**2) / r0**2 * 4 * np.pi * np.array([profile.angular_moments(r_bar, L) for L in L_list])
         else:
             term_2 = (
-                -(r_bar**2)
-                / r0**2
-                * np.array(
-                    [
-                        2 * np.pi * integrate(integrand, 0, np.pi, args=[L])
-                        for L in L_list
-                    ]
-                )
+                -(r_bar**2) / r0**2 * np.array([2 * np.pi * integrate(integrand, 0, np.pi, args=[L]) for L in L_list])
             )
 
     elif num_variables == 2:
@@ -368,8 +345,7 @@ def F(profile, i):
 
         # mean values of phi and mu
         y_bar = 0.5 * (
-            profile.y[num_func * i : num_func * (i + 1)]
-            + profile.y[num_func * (i + 1) : num_func * (i + 2)]
+            profile.y[num_func * i : num_func * (i + 1)] + profile.y[num_func * (i + 1) : num_func * (i + 2)]
         )
         phi_L_bar = y_bar[: len(L_list)]
         mu_L_bar = y_bar[len(L_list) :]
@@ -382,33 +358,16 @@ def F(profile, i):
             return np.sum(phi_L_bar * Z_list)
 
         def integrand(theta, L):
-            return (
-                Z(L, 0, theta, 0)
-                * np.exp(-phi_b(theta) - phi_dm(theta))
-                * np.sin(theta)
-            )
+            return Z(L, 0, theta, 0) * np.exp(-phi_b(theta) - phi_dm(theta)) * np.sin(theta)
 
         term_1 = -L_list * (L_list + 1) * phi_L_bar
         if profile.angular_moments_set:
-            term_2 = (
-                -(r_bar**2)
-                / r0**2
-                * 4
-                * np.pi
-                * np.array([profile.angular_moments(r_bar, L) for L in L_list])
-            )
+            term_2 = -(r_bar**2) / r0**2 * 4 * np.pi * np.array([profile.angular_moments(r_bar, L) for L in L_list])
             # check = - r_bar**2/r0**2 * np.array([ 2*np.pi * integrate( integrand, 0, np.pi, args=[L]) for L in L_list ])
             # print('F', term_2, check)
         else:
             term_2 = (
-                -(r_bar**2)
-                / r0**2
-                * np.array(
-                    [
-                        2 * np.pi * integrate(integrand, 0, np.pi, args=[L])
-                        for L in L_list
-                    ]
-                )
+                -(r_bar**2) / r0**2 * np.array([2 * np.pi * integrate(integrand, 0, np.pi, args=[L]) for L in L_list])
             )
 
     elif num_variables == 3:
@@ -432,10 +391,7 @@ def G(profile, i):
     L = profile.L_list
 
     # mean values of phi and mu
-    y_bar = 0.5 * (
-        profile.y[num_func * i : num_func * (i + 1)]
-        + profile.y[num_func * (i + 1) : num_func * (i + 2)]
-    )
+    y_bar = 0.5 * (profile.y[num_func * i : num_func * (i + 1)] + profile.y[num_func * (i + 1) : num_func * (i + 2)])
     mu_L_bar = y_bar[len(L) :]
 
     r_list = profile.r_list
@@ -483,16 +439,13 @@ def A_matrix(profile, i):
         num_size = len(L_list)
 
         y_bar = 0.5 * (
-            profile.y[num_func * i : num_func * (i + 1)]
-            + profile.y[num_func * (i + 1) : num_func * (i + 2)]
+            profile.y[num_func * i : num_func * (i + 1)] + profile.y[num_func * (i + 1) : num_func * (i + 2)]
         )
         phi_L_bar = np.array(y_bar[:num_size])
         mu_L_bar = np.array(y_bar[num_size:])
 
         phi_b = (Phi_b(r_bar) - Phi_b(0)) / sigma0**2
-        phi_dm = lambda th: np.sum(
-            [phi_L_bar[a] * Z(L_list[a], 0, th, 0) for a in range(num_size)]
-        )
+        phi_dm = lambda th: np.sum([phi_L_bar[a] * Z(L_list[a], 0, th, 0) for a in range(num_size)])
 
         dFdphi = np.zeros((num_size, num_size))
         for a in range(num_size):
@@ -501,12 +454,7 @@ def A_matrix(profile, i):
                 # check if angular_moments are set and use existing calculations for a=0
                 if profile.angular_moments_set and (a == 0):
                     dFdphi[a, b] = (
-                        r_bar**2
-                        / r0**2
-                        * 4
-                        * np.pi
-                        * Z(0, 0, 0, 0)
-                        * profile.angular_moments(r_bar, L_list[b])
+                        r_bar**2 / r0**2 * 4 * np.pi * Z(0, 0, 0, 0) * profile.angular_moments(r_bar, L_list[b])
                     )
 
                 else:
@@ -516,9 +464,7 @@ def A_matrix(profile, i):
                         * np.exp(-phi_b - phi_dm(th))
                         * np.sin(th)
                     )
-                    dFdphi[a, b] = (
-                        r_bar**2 / r0**2 * 2 * np.pi * integrate(integrand, 0, np.pi)
-                    )
+                    dFdphi[a, b] = r_bar**2 / r0**2 * 2 * np.pi * integrate(integrand, 0, np.pi)
 
                 dFdphi[b, a] = dFdphi[a, b]
                 if a == b:
@@ -538,16 +484,13 @@ def A_matrix(profile, i):
         num_size = len(L_list)
 
         y_bar = 0.5 * (
-            profile.y[num_func * i : num_func * (i + 1)]
-            + profile.y[num_func * (i + 1) : num_func * (i + 2)]
+            profile.y[num_func * i : num_func * (i + 1)] + profile.y[num_func * (i + 1) : num_func * (i + 2)]
         )
         phi_L_bar = np.array(y_bar[:num_size])
         mu_L_bar = np.array(y_bar[num_size:])
 
         phi_b = lambda th: (Phi_b(r_bar, th) - Phi_b(0, th)) / sigma0**2
-        phi_dm = lambda th: np.sum(
-            [phi_L_bar[a] * Z(L_list[a], 0, th, 0) for a in range(num_size)]
-        )
+        phi_dm = lambda th: np.sum([phi_L_bar[a] * Z(L_list[a], 0, th, 0) for a in range(num_size)])
 
         dFdphi = np.zeros((num_size, num_size))
         for a in range(num_size):
@@ -556,12 +499,7 @@ def A_matrix(profile, i):
                 # check if angular_moments are set and use existing calculations for a=0
                 if profile.angular_moments_set and (a == 0):
                     dFdphi[a, b] = (
-                        r_bar**2
-                        / r0**2
-                        * 4
-                        * np.pi
-                        * Z(0, 0, 0, 0)
-                        * profile.angular_moments(r_bar, L_list[b])
+                        r_bar**2 / r0**2 * 4 * np.pi * Z(0, 0, 0, 0) * profile.angular_moments(r_bar, L_list[b])
                     )
 
                     # check:
@@ -576,9 +514,7 @@ def A_matrix(profile, i):
                         * np.exp(-phi_b(th) - phi_dm(th))
                         * np.sin(th)
                     )
-                    dFdphi[a, b] = (
-                        r_bar**2 / r0**2 * 2 * np.pi * integrate(integrand, 0, np.pi)
-                    )
+                    dFdphi[a, b] = r_bar**2 / r0**2 * 2 * np.pi * integrate(integrand, 0, np.pi)
 
                 dFdphi[b, a] = dFdphi[a, b]
                 if a == b:
@@ -628,14 +564,7 @@ def B_matrix(profile, i):
         dFdr0_sq = r_bar**2 / r0**4 * np.exp(-phi_b - phi_dm) * np.sqrt(4 * np.pi)
         dGdr0_sq = 0
 
-        dFdsigma0_sq = (
-            -(r_bar**2)
-            / r0**2
-            / sigma0**2
-            * np.sqrt(4 * np.pi)
-            * phi_b
-            * np.exp(-phi_b - phi_dm)
-        )
+        dFdsigma0_sq = -(r_bar**2) / r0**2 / sigma0**2 * np.sqrt(4 * np.pi) * phi_b * np.exp(-phi_b - phi_dm)
         dGdsigma0_sq = 0
 
         output = np.array([[dGdr0_sq, dGdsigma0_sq], [dFdr0_sq, dFdsigma0_sq]])
@@ -647,16 +576,13 @@ def B_matrix(profile, i):
         num_size = len(L_list)
 
         y_bar = 0.5 * (
-            profile.y[num_func * i : num_func * (i + 1)]
-            + profile.y[num_func * (i + 1) : num_func * (i + 2)]
+            profile.y[num_func * i : num_func * (i + 1)] + profile.y[num_func * (i + 1) : num_func * (i + 2)]
         )
         phi_L_bar = np.array(y_bar[:num_size])
         mu_L_bar = np.array(y_bar[num_size:])
 
         phi_b = (Phi_b(r_bar) - Phi_b(0)) / sigma0**2
-        phi_dm = lambda th: np.sum(
-            [phi_L_bar[a] * Z(L_list[a], 0, th, 0) for a in range(num_size)]
-        )
+        phi_dm = lambda th: np.sum([phi_L_bar[a] * Z(L_list[a], 0, th, 0) for a in range(num_size)])
 
         dFdr0_sq = np.zeros((num_size, 1))
         dFdsigma0_sq = np.zeros((num_size, 1))
@@ -666,38 +592,14 @@ def B_matrix(profile, i):
         for a in range(num_size):
 
             if profile.angular_moments_set:
-                dFdr0_sq[a] = (
-                    r_bar**2
-                    / r0**4
-                    * 4
-                    * np.pi
-                    * profile.angular_moments(r_bar, L_list[a])
-                )
+                dFdr0_sq[a] = r_bar**2 / r0**4 * 4 * np.pi * profile.angular_moments(r_bar, L_list[a])
 
             else:
-                integrand = (
-                    lambda th: Z(L_list[a], 0, th, 0)
-                    * np.exp(-phi_b - phi_dm(th))
-                    * np.sin(th)
-                )
-                dFdr0_sq[a] = (
-                    r_bar**2 / r0**4 * 2 * np.pi * integrate(integrand, 0, np.pi)
-                )
+                integrand = lambda th: Z(L_list[a], 0, th, 0) * np.exp(-phi_b - phi_dm(th)) * np.sin(th)
+                dFdr0_sq[a] = r_bar**2 / r0**4 * 2 * np.pi * integrate(integrand, 0, np.pi)
 
-            integrand = (
-                lambda th: Z(L_list[a], 0, th, 0)
-                * phi_b
-                * np.exp(-phi_b - phi_dm(th))
-                * np.sin(th)
-            )
-            dFdsigma0_sq[a] = (
-                -(r_bar**2)
-                / r0**2
-                / sigma0**2
-                * 2
-                * np.pi
-                * integrate(integrand, 0, np.pi)
-            )
+            integrand = lambda th: Z(L_list[a], 0, th, 0) * phi_b * np.exp(-phi_b - phi_dm(th)) * np.sin(th)
+            dFdsigma0_sq[a] = -(r_bar**2) / r0**2 / sigma0**2 * 2 * np.pi * integrate(integrand, 0, np.pi)
 
         output = np.block([[dGdr0_sq, dGdsigma0_sq], [dFdr0_sq, dFdsigma0_sq]])
 
@@ -708,16 +610,13 @@ def B_matrix(profile, i):
         num_size = len(L_list)
 
         y_bar = 0.5 * (
-            profile.y[num_func * i : num_func * (i + 1)]
-            + profile.y[num_func * (i + 1) : num_func * (i + 2)]
+            profile.y[num_func * i : num_func * (i + 1)] + profile.y[num_func * (i + 1) : num_func * (i + 2)]
         )
         phi_L_bar = np.array(y_bar[:num_size])
         mu_L_bar = np.array(y_bar[num_size:])
 
         phi_b = lambda th: (Phi_b(r_bar, th) - Phi_b(0, th)) / sigma0**2
-        phi_dm = lambda th: np.sum(
-            [phi_L_bar[a] * Z(L_list[a], 0, th, 0) for a in range(num_size)]
-        )
+        phi_dm = lambda th: np.sum([phi_L_bar[a] * Z(L_list[a], 0, th, 0) for a in range(num_size)])
 
         dFdr0_sq = np.zeros((num_size, 1))
         dFdsigma0_sq = np.zeros((num_size, 1))
@@ -727,42 +626,18 @@ def B_matrix(profile, i):
         for a in range(num_size):
 
             if profile.angular_moments_set:
-                dFdr0_sq[a] = (
-                    r_bar**2
-                    / r0**4
-                    * 4
-                    * np.pi
-                    * profile.angular_moments(r_bar, L_list[a])
-                )
+                dFdr0_sq[a] = r_bar**2 / r0**4 * 4 * np.pi * profile.angular_moments(r_bar, L_list[a])
                 # check
                 # integrand = lambda th: Z(L_list[a],0,th,0)*np.exp( - phi_b(th) - phi_dm(th) )*np.sin(th)
                 # check = r_bar**2/r0**4 * 2*np.pi * integrate(integrand, 0, np.pi)
                 # print('B', dFdr0_sq[a], check)
 
             else:
-                integrand = (
-                    lambda th: Z(L_list[a], 0, th, 0)
-                    * np.exp(-phi_b(th) - phi_dm(th))
-                    * np.sin(th)
-                )
-                dFdr0_sq[a] = (
-                    r_bar**2 / r0**4 * 2 * np.pi * integrate(integrand, 0, np.pi)
-                )
+                integrand = lambda th: Z(L_list[a], 0, th, 0) * np.exp(-phi_b(th) - phi_dm(th)) * np.sin(th)
+                dFdr0_sq[a] = r_bar**2 / r0**4 * 2 * np.pi * integrate(integrand, 0, np.pi)
 
-            integrand = (
-                lambda th: Z(L_list[a], 0, th, 0)
-                * phi_b(th)
-                * np.exp(-phi_b(th) - phi_dm(th))
-                * np.sin(th)
-            )
-            dFdsigma0_sq[a] = (
-                -(r_bar**2)
-                / r0**2
-                / sigma0**2
-                * 2
-                * np.pi
-                * integrate(integrand, 0, np.pi)
-            )
+            integrand = lambda th: Z(L_list[a], 0, th, 0) * phi_b(th) * np.exp(-phi_b(th) - phi_dm(th)) * np.sin(th)
+            dFdsigma0_sq[a] = -(r_bar**2) / r0**2 / sigma0**2 * 2 * np.pi * integrate(integrand, 0, np.pi)
 
         output = np.block([[dGdr0_sq, dGdsigma0_sq], [dFdr0_sq, dFdsigma0_sq]])
 
@@ -812,9 +687,7 @@ def CN_matrix(profile):
 
     else:
         for i, L in enumerate(profile.L_list):
-            integrand = (
-                lambda th: np.sin(th) * Z(L, 0, th, 0) * profile.rho_dm_sph(r1, th)
-            )
+            integrand = lambda th: np.sin(th) * Z(L, 0, th, 0) * profile.rho_dm_sph(r1, th)
             CN[num_modes, i] = -0.5 * integrate(integrand, 0, np.pi)
 
     # BC for phi_LM at r=r1 (for L>0)
@@ -863,32 +736,24 @@ def D_matrix(profile, outer_halo):
         L_list = profile.L_list
 
         phi_N_list = profile.y[-num_func : -num_func + num_modes]
-        phi_dm = lambda th: np.sum(
-            [phi_N_list[i] * Z(L_list[i], 0, th, 0) for i in range(num_modes)]
-        )
+        phi_dm = lambda th: np.sum([phi_N_list[i] * Z(L_list[i], 0, th, 0) for i in range(num_modes)])
         phi_b = (Phi_b(rN) - Phi_b(0)) / sigma0**2
 
         if profile.angular_moments_set:
-            rho_mean = (
-                profile.rho0 * profile.angular_moments_list[-1, 0] / Z(0, 0, 0, 0)
-            )
+            rho_mean = profile.rho0 * profile.angular_moments_list[-1, 0] / Z(0, 0, 0, 0)
         else:
             rho = lambda th: profile.rho0 * np.exp(-phi_dm(th) - phi_b)
             integrand = lambda th: rho(th) * np.sin(th)
             rho_mean = 0.5 * integrate(integrand, 0, np.pi)
 
-        D[num_modes, :] = np.array(
-            [-rho_mean / r0**2, rho_mean * (1 + phi_b) / sigma0**2]
-        )
+        D[num_modes, :] = np.array([-rho_mean / r0**2, rho_mean * (1 + phi_b) / sigma0**2])
 
     elif num_variables == 2:
 
         L_list = profile.L_list
 
         phi_N_list = profile.y[-num_func : -num_func + num_modes]
-        phi_dm = lambda th: np.sum(
-            [phi_N_list[i] * Z(L_list[i], 0, th, 0) for i in range(num_modes)]
-        )
+        phi_dm = lambda th: np.sum([phi_N_list[i] * Z(L_list[i], 0, th, 0) for i in range(num_modes)])
         phi_b = lambda th: (Phi_b(rN, th) - Phi_b(0, th)) / sigma0**2
 
         rho = lambda th: profile.rho0 * np.exp(-phi_dm(th) - phi_b(th))
@@ -896,9 +761,7 @@ def D_matrix(profile, outer_halo):
         second_term = 0.5 * integrate(integrand, 0, np.pi) / sigma0**2
 
         if profile.angular_moments_set:
-            rho_mean = (
-                profile.rho0 * profile.angular_moments_list[-1, 0] / Z(0, 0, 0, 0)
-            )
+            rho_mean = profile.rho0 * profile.angular_moments_list[-1, 0] / Z(0, 0, 0, 0)
         else:
             integrand = lambda th: np.sin(th) * rho(th)
             rho_mean = 0.5 * integrate(integrand, 0, np.pi)
@@ -910,14 +773,7 @@ def D_matrix(profile, outer_halo):
 
         L = profile.L_list[i]
 
-        D[num_modes + i, 1] = (
-            -4
-            * np.pi
-            * GN
-            / sigma0**4
-            * rN ** (L + 1)
-            * outer_halo.potential_moments[i]
-        )
+        D[num_modes + i, 1] = -4 * np.pi * GN / sigma0**4 * rN ** (L + 1) * outer_halo.potential_moments[i]
 
     # BC for mu_00 at r1
     D[-1, -1] = np.sqrt(4 * np.pi) * GN * M1 / sigma0**4
@@ -1019,11 +875,7 @@ def H_vector(profile, outer_halo):
     L = np.array(profile.L_list)
     J_LM = outer_halo.potential_moments
 
-    boundary_conditions = (
-        mu_LM_N
-        + rN * (L + 1) * phi_LM_N
-        + 4 * np.pi * GN / sigma0**2 * rN ** (L + 1) * J_LM
-    )
+    boundary_conditions = mu_LM_N + rN * (L + 1) * phi_LM_N + 4 * np.pi * GN / sigma0**2 * rN ** (L + 1) * J_LM
     H_out[num_size + 1 : num_func] = boundary_conditions[1:]
 
     # boundary conditions for mu_00 at r=0
@@ -1055,14 +907,9 @@ def E_vector(profile, outer_halo):
         F_vec = F(profile, i)
         G_vec = G(profile, i)
 
-        Delta_y = (
-            y[num_func * (i + 1) : num_func * (i + 2)]
-            - y[num_func * i : num_func * (i + 1)]
-        )
+        Delta_y = y[num_func * (i + 1) : num_func * (i + 2)] - y[num_func * i : num_func * (i + 1)]
         Delta_r = r_list[i + 1] - r_list[i]
-        E_out[num_func * i : num_func * (i + 1)] = Delta_y + Delta_r * np.block(
-            [G_vec, F_vec]
-        )
+        E_out[num_func * i : num_func * (i + 1)] = Delta_y + Delta_r * np.block([G_vec, F_vec])
 
     rN = profile.r1
     H = H_vector(profile, outer_halo)

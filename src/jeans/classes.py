@@ -36,6 +36,8 @@ from .cdm import (
     NFW_profiles,
     mass_concentration_to_NFW_parameters,
     NFW_parameters_to_mass_concentration,
+    mass_concentration_to_Einasto_parameters,
+    Einasto_parameters_to_mass_concentration,
 )
 from . import rotcurve as rotcurve
 from . import potential as potential
@@ -1354,12 +1356,14 @@ class CDM_profile:
         self,
         *inputs,
         q0=1,
-        alpha=None,
+        # alpha=None,
         M_b=None,
         Phi_b=None,
         AC_prescription=None,
+        halo_type="NFW",
+        gamma=0.3,
         Gnedin_params=(1.6, 0.8),
-        input_NFW=False,
+        input_from_profile_params=False,
         **extraneous,
     ):
 
@@ -1387,30 +1391,52 @@ class CDM_profile:
         if len(inputs) != 2:
             raise Exception("inputs must be 'M200,c' (defaults) or 'rhos,rs' (with input_NFW=True).")
 
-        if alpha:
-            self.halo_type = "Einasto"
-        else:
-            self.halo_type = "NFW"
+        self.halo_type = halo_type
 
-        # Assume input rhos, rs
-        if input_NFW:
-            self.rhos, self.rs = inputs
-            self.M200, self.c, self.r200 = NFW_parameters_to_mass_concentration(*inputs)
-        # Assume input M200, c
-        elif (not input_NFW) and (not alpha):
-            self.M200, self.c = inputs
-            self.rhos, self.rs, self.r200 = mass_concentration_to_NFW_parameters(*inputs)
-        # Assume input M200, c, alpha
-        elif (not input_NFW) and (alpha):
-            self.M200, self.c, self.alpha = inputs + (alpha,)  # inputs is a tuple
-            self.rhos, self.rs, self.r200 = mass_concentration_to_NFW_parameters(*inputs)
+        if halo_type == "NFW":
+            if input_from_profile_params:
+                # Assume rhos, rs inputs
+                self.rhos, self.rs = inputs
+                self.M200, self.c, self.r200 = NFW_parameters_to_mass_concentration(*inputs)
+            else:
+                # Assume M200, c inputs
+                self.M200, self.c = inputs
+                self.rhos, self.rs, self.r200 = mass_concentration_to_NFW_parameters(*inputs)
+
+        elif halo_type == "Einasto":
+            self.gamma = gamma
+            if input_from_profile_params:
+                # Assume rhos, rs inputs
+                self.rhos, self.rs = inputs
+                self.M200, self.c, self.r200 = Einasto_parameters_to_mass_concentration(
+                    *inputs, alpha=self.gamma
+                )  # alpha keyword used to avoid name conflict with gamma function used in cdm.py
+            else:
+                # Assume M200, c inputs
+                self.M200, self.c = inputs
+                self.rhos, self.rs, self.r200 = mass_concentration_to_Einasto_parameters(
+                    *inputs, alpha=self.gamma
+                )  # alpha keyword used to avoid name conflict with gamma function used in cdm.py
         else:
-            raise Exception("inputs inconsistent with NFW or Einasto profiles.")
+            raise Exception("halo_type must be 'NFW' or 'Einasto'.")
+
+        # # Assume input rhos, rs
+        # if input_NFW:
+        #     self.rhos, self.rs = inputs
+        #     self.M200, self.c, self.r200 = NFW_parameters_to_mass_concentration(*inputs)
+        # # Assume input M200, c
+        # elif (not input_NFW) and (not alpha):
+        #     self.M200, self.c = inputs
+        #     self.rhos, self.rs, self.r200 = mass_concentration_to_NFW_parameters(*inputs)
+        # # Assume input M200, c, alpha
+        # elif (not input_NFW) and (alpha):
+        #     self.M200, self.c, self.alpha = inputs + (alpha,)  # inputs is a tuple
+        #     self.rhos, self.rs, self.r200 = mass_concentration_to_NFW_parameters(*inputs)
+        # else:
+        #     raise Exception("inputs inconsistent with NFW or Einasto profiles.")
 
         # Virial mass and concentration parameters
         M200, c = self.M200, self.c
-        if alpha:
-            alpha = self.alpha
 
         # Nonsphericity
         self.q0 = q0
@@ -1459,11 +1485,11 @@ class CDM_profile:
         #     )
         # Load spherically symmetric density and enclosed mass functions
         # NFW case
-        if AC_prescription == None and not alpha:
+        if AC_prescription == None and halo_type == "NFW":
             rho, M_encl = NFW_profiles(M200, c, mass_concentration=True)
         # Einasto case
-        elif AC_prescription == None and alpha:
-            rho, M_encl = Einasto_profiles(M200, c, alpha, mass_concentration=True)
+        elif AC_prescription == None and halo_type == "Einasto":
+            rho, M_encl = Einasto_profiles(M200, c, self.gamma, mass_concentration=True)
         # Adiabatic contraction cases
         # AC_prescription = 'Gnedin' or 'Cautun'
         else:

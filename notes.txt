@@ -115,8 +115,26 @@ To do before adding to paper for submission
 - Add a keyword to activate the timed functions
 
 - FIXES
-    - check the nonconstant q issue 
+    - check the nonconstant q issue DONE
     - spherical baryon potentials should be accepted without a wrapper 
+    - switch alpha for Einasto profile to gamma 
+    - create alpha keyword for the outer halo shape 
+
+14/11/25
+Example notebooks:
+1. Generating profiles DONE
+    - Review of inputs and units 
+    - CDM and SIDM 
+    - Spherical and Nonspherical 
+    - Saving profiles 
+1. Densities DONE 
+    - 1D
+    - 2D 
+2. Halo Shapes DONE 
+    - Constant CDM 
+    - Non-constant CDM 
+3. Rotation curves 
+4. Simulation data 
 
 #############################################
 Things to add to the Jeans code:

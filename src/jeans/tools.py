@@ -21,7 +21,31 @@ from scipy.integrate import solve_ivp
 import dill
 
 from .definitions import no_baryons, integrate, GN
-from .utils import timed
+import time
+from functools import wraps
+
+
+######################################################################
+######################### FUNCTION WRAPPERS ##########################
+######################################################################
+ENABLE_TIMING = False  # Set to False to disable timing decorator
+
+
+def timed(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        if not ENABLE_TIMING:
+            return func(*args, **kwargs)
+
+        start = time.time()
+        result = func(*args, **kwargs)
+        end = time.time()
+
+        filename = func.__code__.co_filename
+        print(f"{func.__name__} (in {filename}) took {end - start:.3f} seconds.")
+        return result
+
+    return wrapper
 
 
 ######################################################################

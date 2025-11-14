@@ -27,7 +27,7 @@ from . import data
 
 from .definitions import GN, integrate
 from .classes import isothermal_profile
-from .utils import timed
+from .tools import timed
 
 
 ########################################################################
@@ -66,13 +66,8 @@ def relaxation(
     success_flag = False
 
     if verbose:
-        print(
-            "Begin spherically-symmetric relaxation with coarse grid (%d r points)."
-            % init_grid
-        )
-        print(
-            " Step 1: Start with DM-only solution and increase baryon fraction from 0 to 1."
-        )
+        print("Begin spherically-symmetric relaxation with coarse grid (%d r points)." % init_grid)
+        print(" Step 1: Start with DM-only solution and increase baryon fraction from 0 to 1.")
 
     while (not success_flag) & (num_iter < max_iter):
 
@@ -82,24 +77,17 @@ def relaxation(
         elif num_variables == 2:
             Phi_b_Upsilon = lambda r, th: Upsilon * Phi_b(r, th)
         else:
-            print(
-                "Case with", num_variables, "variables not supported. Setting Phi_b=0"
-            )
+            print("Case with", num_variables, "variables not supported. Setting Phi_b=0")
             Phi_b_Upsilon = lambda r: 0
 
         # initialize
         y, params = initialize_y(rho1, M1, r_list, Phi_b=Phi_b_Upsilon)
 
         # try to converge
-        y, params, success_flag = loop_relaxation(
-            y, params, r_list, matching, Phi_b_Upsilon
-        )
+        y, params, success_flag = loop_relaxation(y, params, r_list, matching, Phi_b_Upsilon)
 
         if verbose:
-            print(
-                "  iteration %d: baryon fraction = %f, was a success: %s"
-                % (num_iter, Upsilon, str(success_flag))
-            )
+            print("  iteration %d: baryon fraction = %f, was a success: %s" % (num_iter, Upsilon, str(success_flag)))
 
         if not success_flag:
             Upsilon = 0.5 * Upsilon
@@ -121,15 +109,10 @@ def relaxation(
         elif num_variables == 2:
             Phi_b_Upsilon = lambda r, th: Upsilon_new * Phi_b(r, th)
 
-        y_new, params_new, success_flag = loop_relaxation(
-            y, params, r_list, matching, Phi_b_Upsilon
-        )
+        y_new, params_new, success_flag = loop_relaxation(y, params, r_list, matching, Phi_b_Upsilon)
 
         if verbose:
-            print(
-                "  iteration %d: baryon fraction = %f was a success: %s"
-                % (num_iter, Upsilon, str(success_flag))
-            )
+            print("  iteration %d: baryon fraction = %f was a success: %s" % (num_iter, Upsilon, str(success_flag)))
 
         if success_flag:
             y, params, Upsilon = y_new, params_new, Upsilon_new
@@ -141,9 +124,7 @@ def relaxation(
     # Step 2: Let solution converge with finer grid
 
     if verbose:
-        print(
-            " Step 2: Increase number of grid points using interpolated coarse-grid result as initial guess."
-        )
+        print(" Step 2: Increase number of grid points using interpolated coarse-grid result as initial guess.")
 
     grid_size = min(2 * init_grid, r_grid)
 
@@ -161,9 +142,7 @@ def relaxation(
         y[::2] = phi_new
         y[1::2] = eta_new
 
-        y_new, params_new, success_flag = loop_relaxation(
-            y, params, r_list, matching, Phi_b
-        )
+        y_new, params_new, success_flag = loop_relaxation(y, params, r_list, matching, Phi_b)
 
         if verbose:
             print(
@@ -194,14 +173,9 @@ def relaxation(
 
         # Keep iterating until converged with smaller tolerance
         if verbose:
-            print(
-                " Step 3: Continue relaxation until required tolerance %s achieved."
-                % str(finaltol)
-            )
+            print(" Step 3: Continue relaxation until required tolerance %s achieved." % str(finaltol))
 
-        y, params, success_flag = loop_relaxation(
-            y, params, r_list, matching, Phi_b, tol=finaltol
-        )
+        y, params, success_flag = loop_relaxation(y, params, r_list, matching, Phi_b, tol=finaltol)
 
         if verbose:
             print("  iteration %d: was a success: %s" % (num_iter, str(success_flag)))
@@ -475,11 +449,7 @@ def initialize_y(rho1, M1, r_list, Phi_b=None):
 
     while True:
         try:
-            with (
-                pkg_resources.files(data)
-                .joinpath("initial_guess.csv")
-                .open("r") as stream
-            ):
+            with pkg_resources.files(data).joinpath("initial_guess.csv").open("r") as stream:
                 df = pd.read_csv(stream)
             break
         except pd.errors.EmptyDataError:
@@ -542,21 +512,15 @@ def make_phi_b_moment_func(Phi_b, params, r_list):
 
     elif len(signature(Phi_b).parameters) == 2:
 
-        r_points = np.concatenate(
-            ([r_list[0]], 0.5 * (r_list[:-1] + r_list[1:]), [r_list[-1]])
-        )
+        r_points = np.concatenate(([r_list[0]], 0.5 * (r_list[:-1] + r_list[1:]), [r_list[-1]]))
 
         phi_b = lambda r, th: (Phi_b(r, th) - Phi_b(0, th)) / sigma0**2
 
         integrand_0 = lambda th, r: np.exp(-phi_b(r, th)) * np.sin(th)
         integrand_1 = lambda th, r: phi_b(r, th) * np.exp(-phi_b(r, th)) * np.sin(th)
 
-        moment_0_list = [
-            0.5 * integrate(integrand_0, 0, np.pi, args=[r]) for r in r_points
-        ]
-        moment_1_list = [
-            0.5 * integrate(integrand_1, 0, np.pi, args=[r]) for r in r_points
-        ]
+        moment_0_list = [0.5 * integrate(integrand_0, 0, np.pi, args=[r]) for r in r_points]
+        moment_1_list = [0.5 * integrate(integrand_1, 0, np.pi, args=[r]) for r in r_points]
 
         moment_0_int = interp1d(r_points, moment_0_list)
         moment_1_int = interp1d(r_points, moment_1_list)
@@ -606,9 +570,7 @@ def iterate_relaxation(y, params, r_list, matching, Phi_b):
 
 
 # Loop relaxation step until convergence achieved
-def loop_relaxation(
-    y_init, params_init, r_list, matching, Phi_b, max_iter=100, tol=1e-4
-):
+def loop_relaxation(y_init, params_init, r_list, matching, Phi_b, max_iter=100, tol=1e-4):
 
     num_iter = 1
     converged_flag = False

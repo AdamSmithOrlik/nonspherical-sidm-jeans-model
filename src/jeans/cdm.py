@@ -136,14 +136,10 @@ def rho_Einasto(*params, mass_concentration=False):
     """
     if mass_concentration:
         M200, c200, alpha = params
-        rho_minus2, r_minus2, r200 = mass_concentration_to_Einasto_parameters(
-            M200, c200, alpha
-        )
+        rho_minus2, r_minus2, r200 = mass_concentration_to_Einasto_parameters(M200, c200, alpha)
     else:
         rho_minus2, r_minus2, alpha = params
-        M200, c200, r200 = Einasto_parameters_to_mass_concentration(
-            rho_minus2, r_minus2, alpha
-        )
+        M200, c200, r200 = Einasto_parameters_to_mass_concentration(rho_minus2, r_minus2, alpha)
 
     def rho_function(r):
         x = np.asarray(r) / r_minus2
@@ -177,14 +173,10 @@ def M_Einasto(*params, mass_concentration=False):
     """
     if mass_concentration:
         M200, c200, alpha = params
-        rho_minus2, r_minus2, r200 = mass_concentration_to_Einasto_parameters(
-            M200, c200, alpha
-        )
+        rho_minus2, r_minus2, r200 = mass_concentration_to_Einasto_parameters(M200, c200, alpha)
     else:
         rho_minus2, r_minus2, alpha = params
-        M200, c200, r200 = Einasto_parameters_to_mass_concentration(
-            rho_minus2, r_minus2, alpha
-        )
+        M200, c200, r200 = Einasto_parameters_to_mass_concentration(rho_minus2, r_minus2, alpha)
 
     s = 3.0 / alpha
     Pc = gammainc(s, (2.0 / alpha) * (c200**alpha))
@@ -208,9 +200,7 @@ def Einasto_profiles(*params, **kwargs):
 #########################################
 
 
-def AC_profiles(
-    M200, c200, M_baryon, AC_prescription="Cautun", Gnedin_params=(1.6, 0.8)
-):
+def AC_profiles(M200, c200, M_baryon, AC_prescription="Cautun", Gnedin_params=(1.6, 0.8)):
     r"""
     Compute adiabatically contracted (AC) NFW profiles for a dark matter halo, including baryonic effects.
 
@@ -264,14 +254,7 @@ def AC_profiles(
         # Create table of r values
         r_list = np.logspace(np.log10(rmin), np.log10(rmax), num=num_points)
         M_values = np.array(
-            [
-                M_CDM(r)
-                * (
-                    0.45
-                    + 0.38 * ((1 - f_b) / f_b * M_baryon(r) / M_CDM(r) + 1.16) ** 0.53
-                )
-                for r in r_list
-            ]
+            [M_CDM(r) * (0.45 + 0.38 * ((1 - f_b) / f_b * M_baryon(r) / M_CDM(r) + 1.16) ** 0.53) for r in r_list]
         )
 
         M_values = np.append(0, M_values)
@@ -311,6 +294,8 @@ def AC_profiles(
                 else:
                     weight = 0.5
 
+                iter_num += 1
+
             if iter_num == max_iter:
                 raise Exception("AC error: finding r_i never converged within 'rtol'")
 
@@ -332,9 +317,7 @@ def AC_profiles(
     # Extrapolate beyond rmin and rmax using power law
     dlogM_dlogr = np.gradient(np.log(M_values[1:]), np.log(r_list[1:]))
     log_rho = np.log(M_values[1:] / (4 * np.pi * r_list[1:] ** 3) * dlogM_dlogr)
-    log_rho_function = InterpolatedUnivariateSpline(
-        np.log(r_list[1:]), log_rho, k=1, ext=0
-    )
+    log_rho_function = InterpolatedUnivariateSpline(np.log(r_list[1:]), log_rho, k=1, ext=0)
 
     def rho_function(r):
         return np.exp(log_rho_function(np.log(r)))
@@ -345,9 +328,7 @@ def AC_profiles(
 ###################
 # Other functions #
 ###################
-def mass_concentration_to_NFW_parameters(
-    Mvir, c, h=0.7, del_c=200, Omega_m=0.3, Omega_Lambda=0.7, z=0
-):
+def mass_concentration_to_NFW_parameters(Mvir, c, h=0.7, del_c=200, Omega_m=0.3, Omega_Lambda=0.7, z=0):
     r"""
     Convert halo mass and concentration to NFW profile parameters.
 
@@ -396,9 +377,7 @@ def mass_concentration_to_NFW_parameters(
     return rhos, rs, rvir
 
 
-def NFW_parameters_to_mass_concentration(
-    rhos, rs, h=0.7, del_c=200, Omega_m=0.3, Omega_Lambda=0.7, z=0
-):
+def NFW_parameters_to_mass_concentration(rhos, rs, h=0.7, del_c=200, Omega_m=0.3, Omega_Lambda=0.7, z=0):
     r"""
     Convert NFW profile parameters to halo mass and concentration.
 
@@ -460,9 +439,7 @@ def _m_c_alpha(c, alpha):
     return prefac * lower_inc
 
 
-def mass_concentration_to_Einasto_parameters(
-    Mvir, c, alpha, h=0.7, del_c=200, Omega_m=0.3, Omega_Lambda=0.7, z=0
-):
+def mass_concentration_to_Einasto_parameters(Mvir, c, alpha, h=0.7, del_c=200, Omega_m=0.3, Omega_Lambda=0.7, z=0):
     r"""
     Convert halo mass, concentration, and shape parameter to Einasto profile parameters.
 
