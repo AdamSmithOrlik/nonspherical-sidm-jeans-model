@@ -11,7 +11,7 @@ from run_dict import run_dictionary as rd
 
 def main(rd, filename=None):
     start = t.time()
-    now_str = dt.datetime.now().strftime("%Y_%m_%d")
+    now_str = dt.datetime.now().strftime("%Y_%m_%d_%H_%M")
 
     # check is save directory exists, if not create it
     if rd["save_profile"]:
@@ -23,9 +23,7 @@ def main(rd, filename=None):
         if rd["AC_prescription"] == "Gnedin":
             ac_input_dict["Gnedin_params"] = rd["Gnedin_params"]
         else:
-            print(
-                "Warning: AC_prescription not recognized. No adiabatic contraction will be applied."
-            )
+            print("Warning: AC_prescription not recognized. No adiabatic contraction will be applied.")
 
     if rd["model"] == "spherical":
         print("Running spherical model...")
@@ -34,6 +32,8 @@ def main(rd, filename=None):
             rd["M200"],
             rd["c"],
             Phi_b=rd["Phi_b"],
+            halo_type=rd["halo_type"],
+            gamma=rd["gamma"],
             verbose=rd["verbose"],
             **ac_input_dict,
         )
@@ -52,6 +52,8 @@ def main(rd, filename=None):
             rd["c"],
             q0=rd["q0"],
             Phi_b=rd["Phi_b"],
+            halo_type=rd["halo_type"],
+            gamma=rd["gamma"],
             verbose=rd["verbose"],
             **ac_input_dict,
         )
@@ -68,8 +70,9 @@ def main(rd, filename=None):
             rd["M200"],
             rd["c"],
             q0=rd["q0"],
-            alpha=rd["alpha"],
             Phi_b=rd["Phi_b"],
+            halo_type=rd["halo_type"],
+            gamma=rd["gamma"],
             q_mode=rd["q_mode"],
             verbose=rd["verbose"],
             **ac_input_dict,
@@ -86,8 +89,9 @@ def main(rd, filename=None):
             rd["M200"],
             rd["c"],
             q0=rd["q0"],
-            alpha=rd["alpha"],
             Phi_b=rd["Phi_b"],
+            halo_type=rd["halo_type"],
+            gamma=rd["gamma"],
             L_list=rd["L_list"],
             M_list=rd["M_list"],
             verbose=rd["verbose"],
@@ -99,26 +103,24 @@ def main(rd, filename=None):
             print("Isothermal profile computation failed.")
             return None
     else:
-        print(
-            "Error: model not recognized. Choose from 'spherical', 'cdm', 'squashed' or 'isothermal'."
-        )
+        print("Error: model not recognized. Choose from 'spherical', 'cdm', 'squashed' or 'isothermal'.")
         return profile
 
     end = t.time()
     print(f"Time taken to generate profile: {end - start:.2f} seconds")
 
     if rd["save_profile"]:
-        if rd["alpha"]:
-            alpha_str = f"_alpha_{rd['alpha']}"
+        if rd["gamma"]:
+            gamma_str = f"_gamma_{rd['gamma']:.2f}"
         else:
-            alpha_str = ""
+            gamma_str = ""
         if rd["AC_prescription"]:
             ac_str = f"_AC_{rd['AC_prescription']}"
             if rd["AC_prescription"] == "Gnedin":
                 ac_str += f"_A_{rd['Gnedin_params'][0]}_w_{rd['Gnedin_params'][1]}"
         else:
             ac_str = ""
-        file_identifier = f"model_{rd['model']}_r1_{rd['r1']}_logM200_{np.log10(rd['M200']):.1f}_c_{rd['c']}{alpha_str}{ac_str}_{now_str}"
+        file_identifier = f"{rd['model']}_r1_{rd['r1']:.1f}_logM200_{np.log10(rd['M200']):.1f}_c_{rd['c']}_{rd['halo_type']}{gamma_str}{ac_str}_{now_str}"
 
         if filename is None:
             filename = f"{file_identifier}.npz"
@@ -176,15 +178,13 @@ if __name__ == "__main__":
     # filename = "MW"  # specify for a custom filename
 
     # logic for scanning over parameters
-    scan_keys = ["r1", "M200", "c", "q0", "alpha"]
+    scan_keys = ["r1", "M200", "c", "q0", "gamma"]
 
     if np.any([isinstance(rd[key], (np.ndarray, list)) for key in scan_keys]):
         varied_dicts = list(expand_over_keys(rd, scan_keys))
         num_dicts = len(varied_dicts)
         if num_dicts > 10:
-            print(
-                f"Warning: attempting to run {num_dicts} models. Would you like to continue? (y/n)"
-            )
+            print(f"Warning: attempting to run {num_dicts} models. Would you like to continue? (y/n)")
             ans = input()
             if ans.lower() != "y":
                 print("Exiting.")
