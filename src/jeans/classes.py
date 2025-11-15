@@ -480,8 +480,8 @@ class profile:
         else:
             return Vsq
 
-    def Vdm(self, r):
-        return np.sqrt(self.Vsq_dm(r))
+    def Vdm(self, r, Lmax=10):
+        return np.sqrt(self.Vsq_dm(r, Lmax=Lmax))
 
     def Vsq(self, r, Lmax=10):
         return self.Vsq_baryon(r) + self.Vsq_dm(r, Lmax=Lmax)

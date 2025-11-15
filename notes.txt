@@ -133,7 +133,7 @@ Example notebooks:
 2. Halo Shapes DONE 
     - Constant CDM 
     - Non-constant CDM 
-3. Rotation curves 
+3. Rotation curves DONE 
 4. Simulation data 
 
 #############################################
