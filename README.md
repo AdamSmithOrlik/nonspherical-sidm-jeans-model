@@ -6,7 +6,7 @@ This package is intended for researchers and students working in astrophysics an
 
 ## Features
 
-The jeans model incorporates the effects on the dark matter halo due to the baryon distributions, axis ratios, and adiabatic contraction for a wide range of halo masses. Currently the jeans model is implements in one- and two-dimensions, with further work intended to extend two the full three-dimensional model. A shortlist of the inputs and outputs of the model are listed below:
+The jeans model incorporates the effects on the dark matter halo due to the baryon distributions, axis ratios, and adiabatic contraction for a wide range of halo masses. Currently the jeans model is implemented in one- and two-dimensions, with further work intended to extend two the full three-dimensional model. A shortlist of the inputs and outputs of the model are listed below:
 
 Inputs
 
@@ -85,7 +85,7 @@ _See the `examples/` folder for Jupyter notebooks and scripts demonstrating more
 
 In the `scripts/` folder you may update the configuration dictionaries in the file `run_dict.py`. To generate profiles run `python run.py` in the command line. Profiles will be saved in the `data/` folder and can be loaded with the jeans method `jeans.load(<filename>)`.
 
-The `run_dict.py` configuration file allows the user to run a single profile at a time, or run a scan of input parameters. The user may also wish to define their own bayon potential and/or outer shape profile, which they may do by updating the dictionaries at the end of the file.
+The `run_dict.py` configuration file allows the user to run a single profile at a time, or run a scan of input parameters. The user may also wish to define their own bayon potential and/or outer halo shape profile, which they may do by updating the dictionaries at the end of the file.
 
 ---
 
