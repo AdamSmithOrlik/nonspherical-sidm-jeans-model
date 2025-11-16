@@ -1,14 +1,14 @@
 # jeans
 
-**jeans** is a Python package for computing collisionless dark matter (CDM) and self-interacting dark matter (SIDM) halo profiles used in the paper [_Jeans Model for the Shapes of Self-interacting Dark Matter Halos_](link).
-
-The jeans package implements the standard jeans model extended beyond spherical symmetry and including baryons.
+**jeans** is a Python package for computing dark matter halo profiles with baryons used in the paper [_Jeans Model for the Shapes of Self-interacting Dark Matter Halos_](link). The jeans package can be used to model collisioinless dark matter (CDM) and self-interacting dark matter (SIDM) in one dimension assuming spherical symmetry and two dimensions assuming axisymmetry.
 
 This package is intended for researchers and students working in astrophysics and cosmology, especially those interested in the structure and dynamics of dark matter halos.
 
 ## Features
 
-Shortlist of Inputs
+The jeans model incorporates the effects on the dark matter halo due to the baryon distributions, axis ratios, and adiabatic contraction for a wide range of halo masses. Currently the jeans model is implements in one- and two-dimensions, with further work intended to extend two the full three-dimensional model. A shortlist of the inputs and outputs of the model are listed below:
+
+Inputs
 
 - Matching radius: r1
 - Virial mass: M200
@@ -18,7 +18,7 @@ Shortlist of Inputs
 - CDM Halo Type: NFW or Einasto
 - Adiabatic Contraction: Cautun or Gnedin
 
-Shortlist of Outputs
+Outputs
 
 - Densities (one- and two-dimensions)
 - Rotation Curves (Total, DM, and Baryons)
@@ -27,7 +27,7 @@ Shortlist of Outputs
 - Mass Enclosed Profiles
 - Gravitational Potentials
 
-_see profile notebook in examples for more_
+_See profile notebook in examples for more._
 
 ## Requirements
 
@@ -64,7 +64,10 @@ import jeans
 # Phi_b: baryon potential as a function of (r, th)
 # AC_prescription: prescription for adiabatic contraction
 
+# Generate profile
 profile = jeans.squashed(r1, M200, c, q0=q0, Phi_b=Phi_b, **{'AC_prescription':'Cautun'})
+
+# Generate the denisty profile
 r = np.logspace(-1, 3, 100)  # kpc
 rho_sph = profile.rho_sph_avg(r)
 
@@ -76,11 +79,13 @@ plt.ylabel('Density [Msun/kpc^3]')
 plt.show()
 ```
 
-See the `examples/` folder for Jupyter notebooks and scripts demonstrating more advanced usage.
+_See the `examples/` folder for Jupyter notebooks and scripts demonstrating more advanced usage._
 
 ### Use in Command Line
 
 In the `scripts/` folder you may update the configuration dictionaries in the file `run_dict.py`. To generate profiles run `python run.py` in the command line. Profiles will be saved in the `data/` folder and can be loaded with the jeans method `jeans.load(<filename>)`.
+
+The `run_dict.py` configuration file allows the user to run a single profile at a time, or run a scan of input parameters. The user may also wish to define their own bayon potential and/or outer shape profile, which they may do by updating the dictionaries at the end of the file.
 
 ---
 

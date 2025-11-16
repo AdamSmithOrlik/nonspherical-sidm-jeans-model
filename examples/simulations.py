@@ -14,9 +14,7 @@ base_path = os.getcwd()  # change for your setup
 
 
 class fit:
-    def __init__(
-        self, halo_id, data_path="/data/EAGLE-50-data/", model="SIDM1b", verbose=False
-    ):
+    def __init__(self, halo_id, data_path="/data/EAGLE-50-data/", model="SIDM1b", verbose=False):
         self.data_path = base_path + data_path
         self.halo_id = halo_id
         self.model = model
@@ -29,27 +27,19 @@ class fit:
 
         # Check if model is valid
         if self.model not in self._model_list:
-            raise Exception(
-                f"Model {self.model} not recognized. Choose from {self._model_list}."
-            )
+            raise Exception(f"Model {self.model} not recognized. Choose from {self._model_list}.")
 
         if verbose:
             print(f"Loading data for halo {self.halo_id} with model {self.model}...")
 
-        sph_filename = (
-            self.data_path + f"{self.model}_sphericallyAveraged_density_profiles.hdf5"
-        )
-        cyl_filename = (
-            self.data_path + f"{self.model}_cylindrical_density_and_potential.hdf5"
-        )
+        sph_filename = self.data_path + f"{self.model}_sphericallyAveraged_density_profiles.hdf5"
+        cyl_filename = self.data_path + f"{self.model}_cylindrical_density_and_potential.hdf5"
         axi_filename = self.data_path + f"{self.model}_axisymmetric_shape_profiles.hdf5"
 
         # Check if files exist
         for filename in [sph_filename, cyl_filename, axi_filename]:
             if not os.path.isfile(filename):
-                print(
-                    f"File {filename} not found. If you do not need this file, ignore this message..."
-                )
+                print(f"File {filename} not found. If you do not need this file, ignore this message...")
 
         # Load spherical data
         self.sph_data = {}
@@ -77,9 +67,7 @@ class fit:
             print(f"Error loading axisymmetric data: {e}")
 
         if verbose:
-            print(
-                "Data loaded into dictionary attributes: sph_data, cyl_data, shape_data."
-            )
+            print("Data loaded into dictionary attributes: sph_data, cyl_data, shape_data.")
 
         # Load halo properties as attributed of the class
         self.M200 = self.sph_data.get("M200", np.nan)
@@ -131,6 +119,26 @@ class fit:
         rho = rho_star + rho_gas + rho_bh
         return {"r": r_list, "rho": rho}
 
+    def dm_mass_enclosed(self):
+        r_list = self.sph_data["redges"] * 1e3  # convert to kpc
+        M_dm = self.sph_data["dm_M"]  # Msol
+        return {"r": r_list, "M_dm": M_dm}
+
+    def star_mass_enclosed(self):
+        r_list = self.sph_data["rs"] * 1e3  # convert to kpc
+        M_star = self.sph_data["star_M"]  # Msol
+        return {"r": r_list, "M_star": M_star}
+
+    def gas_mass_enclosed(self):
+        r_list = self.sph_data["rs"] * 1e3  # convert to kpc
+        M_gas = self.sph_data["gas_M"]  # Msol
+        return {"r": r_list, "M_gas": M_gas}
+
+    def bh_mass_enclosed(self):
+        r_list = self.sph_data["rs"] * 1e3  # convert to kpc
+        M_bh = self.sph_data["bh_M"]  # Msol
+        return {"r": r_list, "M_bh": M_bh}
+
     def cyl_dm_density(self):
         rho_2D = self.cyl_data["smooth_dm_rho"] * 1e-9  # convert to Msol/kpc^3
         extent = [self.Redges[0], self.Redges[-1], self.Zedges[0], self.Zedges[-1]]
@@ -153,9 +161,7 @@ class fit:
 
     def cyl_baryon_density(self):
         rho_2D = (
-            self.cyl_data["star_rho"]
-            + self.cyl_data["gas_rho"]
-            + self.cyl_data["bh_rho"]
+            self.cyl_data["star_rho"] + self.cyl_data["gas_rho"] + self.cyl_data["bh_rho"]
         ) * 1e-9  # convert to Msol/kpc^3
         extent = [self.Redges[0], self.Redges[-1], self.Zedges[0], self.Zedges[-1]]
         return {"R": self.Rcent, "z": self.Zcent, "rho_2D": rho_2D, "extent": extent}
@@ -163,9 +169,7 @@ class fit:
     def cyl_dm_density_func(self):
         rho_2D = self.cyl_data["smooth_dm_rho"] * 1e-9  # convert to Msol/kpc^3
         extent = [self.Redges[0], self.Redges[-1], self.Zedges[0], self.Zedges[-1]]
-        rho_2D_int = RectBivariateSpline(
-            self.Rcent, self.Zcent, rho_2D, bbox=extent, kx=3, ky=3
-        )
+        rho_2D_int = RectBivariateSpline(self.Rcent, self.Zcent, rho_2D, bbox=extent, kx=3, ky=3)
         return rho_2D_int
 
     # SHAPE PROFILES
@@ -173,24 +177,27 @@ class fit:
         r_list = self.shape_data["reff"] * 1e3  # convert to kpc
         q = self.shape_data["dm_Q"]
         error = self.shape_data["dm_Q_error"]
-        return {"r": r_list, "q": q, "error": error}
+        N = self.shape_data["dm_N"]
+        return {"r": r_list, "q": q, "error": error, "N": N}
 
     def q_stars(self):
         r_list = self.shape_data["reff"] * 1e3  # convert to kpc
         q = self.shape_data["star_Q"]
-        return {"r": r_list, "q": q}
+        N = self.shape_data["star_N"]
+        return {"r": r_list, "q": q, "N": N}
 
     def q_gas(self):
         r_list = self.shape_data["reff"] * 1e3  # convert to kpc
         q = self.shape_data["gas_Q"]
-        return {"r": r_list, "q": q}
+        N = self.shape_data["gas_N"]
+        return {"r": r_list, "q": q, "N": N}
 
-    def q_baryon(self):
-        r_list = self.shape_data["reff"] * 1e3  # convert to kpc
-        q_star = self.shape_data["star_Q"]
-        q_gas = self.shape_data["gas_Q"]
-        q_baryon = np.average([q_star, q_gas])  # simple average
-        return {"r": r_list, "q": q_baryon}
+    # def q_baryon(self):
+    #     r_list = self.shape_data["reff"] * 1e3  # convert to kpc
+    #     q_star = self.shape_data["star_Q"]
+    #     q_gas = self.shape_data["gas_Q"]
+    #     q_baryon = np.average([q_star, q_gas])  # simple average
+    #     return {"r": r_list, "q": q_baryon}
 
 
 # Helper functions
@@ -252,9 +259,7 @@ def compute_Phi_b_spherical(data):
     # Boundary condition y(rmin) = 0.5*GN*M(rmin)/rmin
     # Assuming constant density sphere for r < rmin
     ymin = 0.5 * GN * Mmin / rmin
-    solution = solve_ivp(
-        RHS, [rmin, rmax], [ymin], dense_output=True, atol=1e-8, rtol=1e-8
-    )
+    solution = solve_ivp(RHS, [rmin, rmax], [ymin], dense_output=True, atol=1e-8, rtol=1e-8)
     y_int = solution.sol
     ymax = y_int(rmax)[0]
 
@@ -290,15 +295,11 @@ def compute_Phi_b_cylindrical(data, sphdata, file="star_potential_sphere", Lmax=
     rmax = R_edges[-1]
     extent = [R_edges[0], R_edges[-1], z_edges[0], z_edges[-1]]
 
-    Phi_b_2D_int = RectBivariateSpline(
-        R_cent, z_cent, Phi_b_2D_data, bbox=extent, kx=3, ky=3
-    )
+    Phi_b_2D_int = RectBivariateSpline(R_cent, z_cent, Phi_b_2D_data, bbox=extent, kx=3, ky=3)
 
     Phi_b_spherical = compute_Phi_b_spherical(sphdata)
 
-    integrand = lambda th: Phi_b_2D_int(rmax * np.sin(th), rmax * np.cos(th))[0][
-        0
-    ] * np.sin(th)
+    integrand = lambda th: Phi_b_2D_int(rmax * np.sin(th), rmax * np.cos(th))[0][0] * np.sin(th)
     Delta_Phi = Phi_b_spherical(rmax) - 0.5 * integrate(integrand, 0, np.pi)
 
     # Compute multipole moments
@@ -312,9 +313,7 @@ def compute_Phi_b_cylindrical(data, sphdata, file="star_potential_sphere", Lmax=
     # print(Q)
 
     def Phi_b_multipole(r, th):
-        return np.sum(
-            [-Q[L] * (rmax / r) ** L * Z(L, 0, th, 0) for L in range(Lmax + 1)]
-        )
+        return np.sum([-Q[L] * (rmax / r) ** L * Z(L, 0, th, 0) for L in range(Lmax + 1)])
 
     def Phi_b(r, th):
 
@@ -345,12 +344,8 @@ def compute_q_phib(data, file="star_potential_sphere"):
     R = np.arange(0.5, 100, 1)
     z = np.arange(0.5, 100, 1)
 
-    log_Phi_radial_interp = InterpolatedUnivariateSpline(
-        np.log(R), np.log(Phi_radial_slice), ext=3
-    )
-    log_Phi_axial_interp = InterpolatedUnivariateSpline(
-        np.log(z), np.log(Phi_axial_slice), ext=3
-    )
+    log_Phi_radial_interp = InterpolatedUnivariateSpline(np.log(R), np.log(Phi_radial_slice), ext=3)
+    log_Phi_axial_interp = InterpolatedUnivariateSpline(np.log(z), np.log(Phi_axial_slice), ext=3)
 
     r_list = np.linspace(1, 50, num=100)
     q_list = []
@@ -391,9 +386,7 @@ def compute_q_phib(data, file="star_potential_sphere"):
 def integrate(func, xmin, xmax, atol=1e-8, rtol=1e-8, args=()):
 
     try:
-        output = quad(
-            func, xmin, xmax, args=tuple(args), limit=50, epsabs=atol, epsrel=rtol
-        )[0]
+        output = quad(func, xmin, xmax, args=tuple(args), limit=50, epsabs=atol, epsrel=rtol)[0]
 
     except:
 
@@ -412,9 +405,7 @@ def Z(L, M, theta, phi):
     x = np.cos(theta)
 
     if M == 0:
-        return (
-            Condon_Shortley_phase * np.sqrt((2 * L + 1) / (4 * np.pi)) * lpmv(0, L, x)
-        )
+        return Condon_Shortley_phase * np.sqrt((2 * L + 1) / (4 * np.pi)) * lpmv(0, L, x)
     elif M > 0:
         fact = lambda num: factorial(num, exact=True)
         return (

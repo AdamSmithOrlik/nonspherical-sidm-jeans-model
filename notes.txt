@@ -136,6 +136,8 @@ Example notebooks:
 3. Rotation curves DONE 
 4. Simulation data 
 
+- Change the naming once you move the package over to sean
+
 #############################################
 Things to add to the Jeans code:
     - jeans.load function -- Done 
